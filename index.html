@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊FinanceX Corporate (PJ)</title>
+    
+    <!-- CSS e Ícones -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- API de Gráficos: Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        select { -webkit-appearance: none; appearance: none; }
+        .custom-alert { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        [x-cloak] { display: none !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen p-4 md:p-8">
+
+    <!-- Contêiner Mestre: Ajustado para expandir até 5xl em telas grandes -->
+    <div x-data="app()" x-cloak class="w-full max-w-6xl space-y-4 transition-all duration-300">
+
+        <!-- Sistema de Alertas Modais -->
+        <div x-show="message.show" x-transition.opacity.duration.300 class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 custom-alert backdrop-blur-sm">
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-xs border border-yellow-600">
+                <h3 class="text-lg font-bold mb-3 text-yellow-500" x-text="message.title"></h3>
+                <p class="text-sm text-gray-300 mb-4" x-html="message.body"></p>
+                
+                <template x-if="message.type === 'prompt'">
+                    <input type="number" x-model="message.inputValue" class="w-full bg-gray-900 text-white p-3 rounded-lg mb-4 border border-gray-700 focus:border-yellow-500 outline-none font-bold text-center text-lg shadow-inner" placeholder="0,00" autofocus>
+                </template>
+
+                <div class="flex justify-end space-x-3">
+                    <template x-if="message.type === 'confirm' || message.type === 'prompt'">
+                        <button @click="message.reject()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Cancelar</button>
+                    </template>
+                    <button @click="message.resolve()" :class="message.type === 'confirm' ? 'bg-red-600 hover:bg-red-500' : 'bg-yellow-600 hover:bg-yellow-500 text-slate-900'" class="font-bold py-2 px-4 rounded-lg text-sm transition">
+                        <span x-text="message.confirmText"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tela de Login PJ (Mantida estreita e centralizada na tela) -->
+        <div x-show="!isLoggedIn" class="max-w-md mx-auto bg-gray-900 p-8 rounded-3xl shadow-2xl border border-yellow-600/50 min-h-[400px] flex flex-col justify-center items-center text-center mt-10 md:mt-20">
+            <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_#eab30840] border border-yellow-500/30">
+                <i class="fa-solid fa-briefcase text-yellow-500 text-4xl"></i>
+            </div>
+            <h1 class="text-2xl font-black mb-2 tracking-tight">Acesso Empresarial</h1>
+            <p class="text-sm text-gray-400 mb-8">Área restrita de gestão financeira corporativa.</p>
+
+            <input x-model="profileName" type="text" placeholder="Nome da Empresa/Perfil" class="w-full bg-gray-800 text-white p-3.5 rounded-xl mb-4 border border-gray-700 focus:border-yellow-500 outline-none shadow-inner transition">
+            
+            <input x-model="password" @keydown.enter="login()" type="password" placeholder="Senha de Acesso" class="w-full bg-gray-800 text-white p-3.5 rounded-xl mb-6 border border-gray-700 focus:border-yellow-500 outline-none shadow-inner transition">
+            
+            <div class="flex space-x-3 w-full mb-4">
+                <button @click="login()" class="flex-1 bg-yellow-600 hover:bg-yellow-500 text-slate-900 font-black py-3.5 rounded-xl transition shadow-lg">Acessar</button>
+                <button @click="criarPerfil()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg border border-gray-600">Criar Novo</button>
+            </div>
+
+            <!-- Botão de Biometria -->
+            <button x-show="profileName.length > 0" @click="loginBiometrico()" x-transition class="w-full bg-slate-800 hover:bg-slate-700 text-yellow-500 font-bold py-3.5 rounded-xl border border-yellow-600/30 transition shadow-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-fingerprint text-xl"></i> Desbloqueio Biométrico
+            </button>
+
+            <p x-show="loginError" class="text-red-400 text-sm mt-5 font-bold bg-red-900/20 py-2 px-4 rounded-lg" x-text="loginError"></p>
+        </div>
+
+        <!-- Dashboard Principal: Transformado em Grid Responsivo -->
+        <div x-show="isLoggedIn" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- COLUNA ESQUERDA (Operacional - Lançamentos e Ações Rápidas) -->
+            <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-8">
+                
+                <!-- Header do Saldo -->
+                <div class="bg-gradient-to-br from-gray-900 to-slate-800 p-6 rounded-3xl border border-yellow-700/50 text-center relative overflow-hidden shadow-2xl">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-yellow-500 shadow-[0_0_15px_#eab308]"></div>
+                    <h1 class="text-yellow-400 text-xs uppercase tracking-widest mb-2 font-bold opacity-80">Caixa Atual (<span x-text="profileName"></span>)</h1>
+                    
+                    <div class="flex items-center justify-center gap-3">
+                        <div class="text-4xl lg:text-5xl font-black text-white drop-shadow-lg tracking-tighter" x-text="formatarMoeda(saldoTotal)"></div>
+                        <button @click="editarSaldo()" class="text-yellow-500 hover:text-slate-900 hover:bg-yellow-500 transition bg-yellow-900/30 w-8 h-8 rounded-full flex items-center justify-center border border-yellow-500/30 shadow-md">
+                            <i class="fa-solid fa-pencil text-xs"></i>
+                        </button>
+                    </div>
+                    
+                    <button @click="logout()" class="absolute top-3 right-4 text-sm text-gray-500 hover:text-red-400 transition bg-gray-800/50 w-8 h-8 rounded-full flex items-center justify-center" title="Sair do Sistema"><i class="fa-solid fa-power-off"></i></button>
+                </div>
+
+                <!-- Formulário de Novo Lançamento -->
+                <div class="bg-gray-800 p-5 rounded-3xl shadow-xl border border-yellow-700/30 relative">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-white uppercase text-sm tracking-wider"><i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>Novo Registro</h2>
+                        <button @click="mostrandoConfig = !mostrandoConfig" class="text-gray-500 hover:text-yellow-500 transition w-8 h-8 flex items-center justify-center bg-gray-900 rounded-full"><i class="fa-solid fa-gear"></i></button>
+                    </div>
+
+                    <div class="flex gap-2 mb-4">
+                        <button @click="form.tipo = 'entrada'" :class="form.tipo === 'entrada' ? 'bg-green-600 text-white shadow-lg shadow-green-900/50 ring-2 ring-green-400 ring-offset-2 ring-offset-gray-800' : 'bg-gray-900 text-gray-400 hover:bg-gray-700'" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition uppercase">Entrada</button>
+                        <button @click="form.tipo = 'saida'" :class="form.tipo === 'saida' ? 'bg-red-600 text-white shadow-lg shadow-red-900/50 ring-2 ring-red-400 ring-offset-2 ring-offset-gray-800' : 'bg-gray-900 text-gray-400 hover:bg-gray-700'" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition uppercase">Saída</button>
+                    </div>
+
+                    <!-- Gestor de Categorias e Biometria (Config) -->
+                    <div x-show="mostrandoConfig" x-transition class="mb-5 p-4 bg-gray-900 rounded-2xl border border-gray-700 shadow-inner">
+                        <div class="flex gap-2 mb-2">
+                            <input x-model="novaCategoria" type="text" placeholder="Nova categoria..." class="flex-1 bg-gray-800 p-2.5 px-4 rounded-xl text-xs text-white border border-gray-600 outline-none focus:border-yellow-500 transition">
+                            <button @click="adicionarCategoria()" class="bg-yellow-600 hover:bg-yellow-500 w-10 rounded-xl text-slate-900 text-sm font-black transition shadow-lg"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5 mt-3 mb-4">
+                            <template x-for="(cat, idx) in categorias" :key="idx">
+                                <span class="bg-gray-700 text-[10px] px-2.5 py-1.5 rounded-lg border border-gray-600 flex items-center gap-2 shadow-sm">
+                                    <span x-text="cat" class="font-semibold text-gray-200"></span>
+                                    <button @click="removerCategoria(idx)" class="text-red-400 hover:text-white transition w-4 h-4 flex items-center justify-center bg-gray-800 rounded-full"><i class="fa-solid fa-xmark text-[8px]"></i></button>
+                                </span>
+                            </template>
+                        </div>
+                        
+                        <div class="border-t border-gray-800 pt-4">
+                            <button @click="configurarBiometria()" class="w-full bg-slate-800 border border-slate-600 text-yellow-500 hover:text-yellow-400 text-xs font-bold py-3 rounded-xl hover:bg-slate-700 transition flex items-center justify-center gap-2 shadow-md">
+                                <i class="fa-solid fa-fingerprint text-base"></i> Registrar Leitura Biométrica
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 mb-5 relative">
+                        <div class="relative w-1/2">
+                            <select x-model="form.categoria" class="w-full bg-gray-900 text-white p-3.5 rounded-xl border border-gray-700 text-sm outline-none focus:border-yellow-500 transition shadow-inner font-semibold">
+                                <template x-for="cat in categorias"><option x-text="cat"></option></template>
+                            </select>
+                            <div class="absolute right-4 top-4 pointer-events-none text-yellow-500 text-xs"><i class="fa-solid fa-caret-down"></i></div>
+                        </div>
+                        
+                        <div class="w-1/2 relative">
+                            <div class="absolute left-3 top-3.5 text-gray-500 text-sm font-bold">R$</div>
+                            <input x-model="form.valor" type="number" step="0.01" placeholder="0.00" class="w-full bg-gray-900 text-white pl-9 pr-4 py-3.5 rounded-xl border border-gray-700 text-right font-mono font-bold outline-none focus:border-yellow-500 transition shadow-inner">
+                            
+                            <div x-show="ultimoValor" x-transition class="absolute -bottom-5 right-1 flex items-center z-10">
+                                <button @click="form.valor = ultimoValor" class="text-[10px] text-yellow-500 hover:text-yellow-400 bg-gray-800 px-2 py-0.5 rounded-md transition shadow-md border border-yellow-900/50 font-semibold flex items-center">
+                                    <i class="fa-solid fa-clock-rotate-left mr-1.5 opacity-70"></i>Repetir: <span class="ml-1" x-text="formatarMoeda(parseFloat(ultimoValor))"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input x-model="form.descricao" @keydown.enter="adicionarTransacao()" type="text" placeholder="Descreva a origem/destino..." class="flex-1 bg-gray-900 text-white p-3.5 rounded-xl border border-gray-700 text-sm outline-none focus:border-yellow-500 transition shadow-inner font-medium">
+                        <button @click="adicionarTransacao()" class="bg-yellow-600 hover:bg-yellow-500 text-slate-900 px-6 rounded-xl transition shadow-lg font-black text-xl w-16 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Controle e Ferramentas (Backup, Limpeza) -->
+                <div class="bg-gray-800 p-2.5 rounded-2xl border border-gray-700 flex gap-2">
+                    <button @click="exportarDados()" class="flex-1 bg-gray-900 text-xs text-gray-300 py-3 rounded-xl hover:bg-yellow-600 hover:text-slate-900 transition flex items-center justify-center gap-2 font-bold shadow-sm border border-gray-700">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Fazer Backup
+                    </button>
+                    <label for="import-file" class="flex-1 bg-gray-900 text-xs text-gray-300 py-3 rounded-xl hover:bg-green-600 hover:text-white transition flex items-center justify-center gap-2 cursor-pointer font-bold shadow-sm border border-gray-700">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> Restaurar
+                    </label>
+                    <input type="file" id="import-file" @change="importarDados($event)" accept=".json" class="hidden">
+
+                    <div class="relative">
+                        <button @click="mostrandoMenuAcoes = !mostrandoMenuAcoes" class="bg-gray-900 text-xs text-gray-400 px-4 rounded-xl hover:bg-red-600 hover:text-white transition flex items-center justify-center h-full border border-gray-700">
+                            <i class="fa-solid fa-ellipsis-vertical text-base"></i>
+                        </button>
+                        <div x-show="mostrandoMenuAcoes" @click.outside="mostrandoMenuAcoes = false" x-transition class="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 rounded-2xl shadow-2xl z-20 border border-gray-600 overflow-hidden">
+                            <h4 class="text-xs text-gray-400 px-4 pt-3 pb-2 font-black uppercase tracking-widest bg-gray-900 border-b border-gray-700">Ações de Perigo</h4>
+                            <a href="#" @click.prevent="limparDados('mes')" class="block px-4 py-3 text-sm text-gray-200 hover:bg-red-500/20 hover:text-red-300 transition"><i class="fa-solid fa-eraser w-5"></i> Limpar Mês Atual</a>
+                            <a href="#" @click.prevent="limparDados('ano')" class="block px-4 py-3 text-sm text-gray-200 hover:bg-red-500/20 hover:text-red-300 transition border-t border-gray-700"><i class="fa-solid fa-calendar-xmark w-5"></i> Limpar Ano Atual</a>
+                            <a href="#" @click.prevent="limparDados('tudo')" class="block px-4 py-3 text-sm text-white bg-red-600 hover:bg-red-500 transition border-t border-red-700 font-bold"><i class="fa-solid fa-triangle-exclamation w-5"></i> FORMATAR BANCO DE DADOS</a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- COLUNA DIREITA (Análise, Gráficos e Extratos) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Bloco de Navegação de Mês (Movido para o topo da coluna direita para lógica visual) -->
+                <div class="bg-gray-800 p-3 rounded-3xl border border-gray-700 flex justify-between items-center shadow-md">
+                    <button @click="mudarMes(-1)" class="w-12 h-12 flex items-center justify-center bg-gray-900 hover:bg-yellow-600 hover:text-slate-900 rounded-full transition shadow-inner text-gray-400"><i class="fa-solid fa-chevron-left"></i></button>
+                    <div class="text-center leading-tight">
+                        <h2 class="text-xl font-black text-white uppercase tracking-wider" x-text="nomeMesAtual"></h2>
+                        <p class="text-sm text-yellow-500 font-mono font-bold" x-text="anoAtual"></p>
+                    </div>
+                    <button @click="mudarMes(1)" class="w-12 h-12 flex items-center justify-center bg-gray-900 hover:bg-yellow-600 hover:text-slate-900 rounded-full transition shadow-inner text-gray-400"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+
+                <!-- NOVO: Área de Relatório Gráfico e Anual -->
+                <div class="bg-gray-800 p-5 rounded-3xl border border-gray-700 shadow-xl lg:flex gap-6 items-center">
+                    
+                    <!-- Resumos Numéricos -->
+                    <div class="lg:w-1/2 space-y-3 mb-6 lg:mb-0">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-2 text-blue-400"></i>Balanço Anual (<span x-text="anoAtual"></span>)</h3>
+                        
+                        <div class="bg-gray-900 p-4 rounded-2xl border-l-4 border-green-500 shadow-sm">
+                            <p class="text-[10px] text-gray-500 uppercase font-bold">Faturamento Acumulado</p>
+                            <p class="text-green-400 font-black text-xl lg:text-2xl tracking-tight" x-text="formatarMoeda(dadosAnuais.entradas)"></p>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded-2xl border-l-4 border-red-500 shadow-sm">
+                            <p class="text-[10px] text-gray-500 uppercase font-bold">Custos e Despesas Acumuladas</p>
+                            <p class="text-red-400 font-black text-xl lg:text-2xl tracking-tight" x-text="formatarMoeda(dadosAnuais.saidas)"></p>
+                        </div>
+                    </div>
+
+                    <!-- Canvas do Chart.js -->
+                    <div class="lg:w-1/2 relative flex justify-center items-center bg-gray-900/50 rounded-2xl p-4 border border-gray-700/50 h-[220px]">
+                        <div x-show="dadosAnuais.entradas === 0 && dadosAnuais.saidas === 0" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600 z-10 bg-gray-900/80 rounded-2xl">
+                            <i class="fa-solid fa-chart-simple text-3xl mb-2 opacity-50"></i>
+                            <p class="text-xs font-bold uppercase">Sem dados no ano</p>
+                        </div>
+                        <!-- Canvas onde o gráfico será desenhado -->
+                        <div class="w-full h-full relative">
+                            <canvas id="graficoDoughnutAnual"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Módulo de Filtro Anual (Auditoria) -->
+                <div class="bg-gray-800 p-5 rounded-3xl shadow-xl border border-blue-900/40 relative">
+                    <h3 class="text-xs uppercase font-bold text-gray-400 mb-4 tracking-widest flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-blue-400"></i> Auditoria Expressa
+                    </h3>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-search text-gray-500 text-sm"></i>
+                        </div>
+                        <input x-model="termoPesquisaAno" type="text" placeholder="Busque por fornecedor, categoria, etc..." class="w-full bg-gray-900 text-white py-3.5 pl-11 pr-4 rounded-xl border border-gray-700 text-sm outline-none focus:border-blue-500 transition placeholder-gray-600 shadow-inner">
+                    </div>
+
+                    <div x-show="termoPesquisaAno.trim().length > 0" x-transition class="mt-4 bg-gray-900/80 p-4 rounded-2xl border border-blue-900/50 shadow-inner">
+                        <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-3">
+                            <span class="text-xs text-gray-400 font-bold uppercase">Resultado em <span x-text="anoAtual" class="text-blue-400"></span>:</span>
+                            <span class="font-black text-xl bg-gray-800 px-3 py-1 rounded-lg border border-gray-700" :class="resultadoPesquisaAno.saldo >= 0 ? 'text-green-400' : 'text-red-400'" x-text="formatarMoeda(resultadoPesquisaAno.saldo)"></span>
+                        </div>
+                        
+                        <div class="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                            <template x-for="item in resultadoPesquisaAno.transacoes" :key="item.id">
+                                <div class="flex justify-between items-center p-3 bg-gray-800 rounded-xl border border-gray-700 hover:border-blue-500/50 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div :class="item.tipo === 'entrada' ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs border border-gray-700">
+                                            <i :class="item.tipo === 'entrada' ? 'fa-solid fa-arrow-down' : 'fa-solid fa-arrow-up'"></i>
+                                        </div>
+                                        <div>
+                                            <span class="font-bold text-gray-200 text-sm" x-text="item.categoria"></span>
+                                            <p class="text-[11px] text-gray-500 truncate max-w-[150px] lg:max-w-[250px]" x-text="item.descricao || 'Sem descrição'"></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="font-mono font-bold block leading-none mb-1" :class="item.tipo === 'entrada' ? 'text-green-400' : 'text-red-400'" x-text="formatarMoeda(item.valor)"></span>
+                                        <span class="text-[9px] text-blue-400 font-bold" x-text="formatarDataCompleta(item.data)"></span>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="resultadoPesquisaAno.transacoes.length === 0" class="text-center text-xs text-gray-500 py-6 font-bold uppercase tracking-widest bg-gray-800 rounded-xl border border-gray-700/50 border-dashed">
+                                Nenhum registro encontrado.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Livro Caixa Mensal -->
+                <div class="bg-gray-800 p-5 rounded-3xl shadow-xl border border-gray-700">
+                    <div class="flex justify-between items-end mb-5 border-b border-gray-700 pb-4">
+                        <div>
+                            <h3 class="text-xs uppercase font-bold text-gray-500 tracking-widest mb-1">Livro Caixa Mensal</h3>
+                            <p class="text-xl font-black text-white capitalize" x-text="nomeMesAtual"></p>
+                        </div>
+                        
+                        <!-- Filtro Mensal -->
+                        <div class="relative w-40">
+                            <select x-model="filtroCategoriaMes" class="w-full appearance-none bg-gray-900 text-xs text-yellow-500 border border-gray-700 rounded-xl px-3 py-2 pr-8 outline-none font-bold uppercase cursor-pointer focus:border-yellow-500 shadow-inner">
+                                <option value="">Todas</option>
+                                <template x-for="cat in categorias"><option x-text="cat"></option></template>
+                            </select>
+                            <div class="absolute right-3 top-2.5 pointer-events-none text-gray-500 text-[10px]"><i class="fa-solid fa-filter"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <template x-for="item in transacoesFiltradasMes" :key="item.id">
+                            <div class="bg-gray-900 p-4 rounded-2xl flex justify-between items-center border border-gray-700/50 hover:border-yellow-600/50 transition group shadow-sm">
+                                <div class="flex items-center gap-4">
+                                    <div :class="item.tipo === 'entrada' ? 'text-green-400 bg-green-900/10' : 'text-red-400 bg-red-900/10'" class="w-10 h-10 rounded-xl flex items-center justify-center text-sm border border-gray-700/80 shadow-inner">
+                                        <i :class="item.tipo === 'entrada' ? 'fa-solid fa-arrow-down' : 'fa-solid fa-arrow-up'"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-200 text-base" x-text="item.categoria"></p>
+                                        <p class="text-xs text-gray-500 mt-0.5" x-text="item.descricao || 'Sem descrição'"></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p :class="item.tipo === 'entrada' ? 'text-green-400' : 'text-red-400'" class="font-mono font-black text-lg tracking-tight" x-text="formatarMoeda(item.valor)"></p>
+                                    <div class="flex items-center justify-end gap-3 mt-1.5">
+                                        <span class="text-[10px] font-bold text-gray-600 bg-gray-800 px-2 py-0.5 rounded border border-gray-700" x-text="formatarDataDia(item.data)"></span>
+                                        <button @click="removerPrompt(item.id)" class="text-gray-600 hover:text-red-500 transition" title="Excluir"><i class="fa-solid fa-trash text-sm"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <div x-show="transacoesFiltradasMes.length === 0" class="text-center text-gray-500 py-10 font-bold uppercase tracking-widest bg-gray-900 rounded-2xl border border-gray-700/50 border-dashed">
+                            <i class="fa-solid fa-folder-open text-3xl mb-3 opacity-30 block"></i>
+                            Vazio neste filtro.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <script>
+        function app() {
+            return {
+                isLoggedIn: false,
+                profileName: '',
+                password: '',
+                loginError: '',
+                dataVisualizacao: new Date(),
+                transacoes: [],
+                categorias: [],
+                novaCategoria: '',
+                filtroCategoriaMes: '',
+                
+                ultimoValor: null,
+                termoPesquisaAno: '',
+
+                mostrandoConfig: false,
+                mostrandoMenuAcoes: false,
+                form: { tipo: 'saida', valor: '', categoria: '', descricao: '' },
+                message: { show: false, type: 'alert', title: '', body: '', confirmText: 'Ok', inputValue: '', resolve: ()=>{}, reject: ()=>{} },
+                
+                // Variável para armazenar a instância do gráfico do Chart.js
+                graficoInstancia: null,
+
+                // --- Alpine Lifecycle ---
+                init() {
+                    // O Alpine vai monitorar a lista de transações e a data de visualização. 
+                    // Se mudarem, ele espera a tela desenhar ($nextTick) e manda atualizar o gráfico.
+                    this.$watch('transacoes', () => this.$nextTick(() => this.atualizarGraficoDashboard()));
+                    this.$watch('dataVisualizacao', () => this.$nextTick(() => this.atualizarGraficoDashboard()));
+                },
+
+                // --- SISTEMA DE GRÁFICOS (CHART.JS) ---
+                atualizarGraficoDashboard() {
+                    // Previne erros se a tela não estiver logada ou não houver DOM
+                    if (!this.isLoggedIn) return;
+                    
+                    const canvas = document.getElementById('graficoDoughnutAnual');
+                    if (!canvas) return;
+
+                    const entradas = this.dadosAnuais.entradas;
+                    const saidas = this.dadosAnuais.saidas;
+                    
+                    // Cálculo de Porcentagem para exibir na Label
+                    const total = entradas + saidas;
+                    let pctEntradas = '0', pctSaidas = '0';
+                    if (total > 0) {
+                        pctEntradas = ((entradas / total) * 100).toFixed(1);
+                        pctSaidas = ((saidas / total) * 100).toFixed(1);
+                    }
+
+                    // Se já existir um gráfico criado, atualizamos só os dados dele (para gerar animação bonita)
+                    if (this.graficoInstancia) {
+                        this.graficoInstancia.data.datasets[0].data = [entradas, saidas];
+                        this.graficoInstancia.data.labels = [`Entradas (${pctEntradas}%)`, `Saídas (${pctSaidas}%)`];
+                        this.graficoInstancia.update();
+                    } else {
+                        // Se não existir, criamos do zero
+                        this.graficoInstancia = new Chart(canvas, {
+                            type: 'doughnut',
+                            data: {
+                                labels: [`Entradas (${pctEntradas}%)`, `Saídas (${pctSaidas}%)`],
+                                datasets: [{
+                                    data: [entradas, saidas],
+                                    backgroundColor: ['#22c55e', '#ef4444'], // Cores do Tailwind Green-500 e Red-500
+                                    borderColor: ['#14532d', '#7f1d1d'], // Bordas escuras
+                                    borderWidth: 2,
+                                    hoverOffset: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false, // Permite que o gráfico preencha a div mãe adequadamente
+                                cutout: '70%', // Espessura da rosca
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                        labels: { color: '#cbd5e1', font: { family: 'Inter', weight: 'bold' }, padding: 15 }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                // Formata a tooltip para aparecer em Reais (R$)
+                                                let label = context.label || '';
+                                                if (label) label += ': ';
+                                                if (context.parsed !== null) {
+                                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed);
+                                                }
+                                                return label;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+                // ----------------------------------------
+
+                showAlert(title, body) {
+                    this.message.title = title; this.message.body = body; this.message.type = 'alert'; this.message.confirmText = 'Ok';
+                    this.message.show = true; this.message.resolve = () => { this.message.show = false; };
+                },
+                showConfirm(title, body, confirmText = 'Confirmar') {
+                    return new Promise((resolve) => {
+                        this.message.title = title; this.message.body = body; this.message.type = 'confirm'; this.message.confirmText = confirmText;
+                        this.message.show = true;
+                        this.message.resolve = () => { this.message.show = false; resolve(true); };
+                        this.message.reject = () => { this.message.show = false; resolve(false); };
+                    });
+                },
+                showPrompt(title, body) {
+                    return new Promise((resolve) => {
+                        this.message.title = title; this.message.body = body; this.message.type = 'prompt'; this.message.confirmText = 'Confirmar';
+                        this.message.inputValue = ''; this.message.show = true;
+                        this.message.resolve = () => { this.message.show = false; resolve(this.message.inputValue); };
+                        this.message.reject = () => { this.message.show = false; resolve(null); };
+                    });
+                },
+
+                async configurarBiometria() {
+                    if (!window.PublicKeyCredential) return this.showAlert('Ops!', 'Seu navegador/aparelho não suporta login biométrico.');
+                    if (location.protocol === 'file:') return this.showAlert('Atenção', 'A biometria exige HTTPS. Teste subindo o arquivo no GitHub Pages.');
+                    try {
+                        const publicKey = {
+                            challenge: new Uint8Array(32),
+                            rp: { name: "FinanceX Corporate" },
+                            user: { id: new Uint8Array(16), name: this.profileName, displayName: this.profileName },
+                            pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                            authenticatorSelection: { userVerification: "required" },
+                            timeout: 60000
+                        };
+                        const cred = await navigator.credentials.create({ publicKey });
+                        if (cred) {
+                            localStorage.setItem(`financex-pj-bio-${this.profileName.toUpperCase()}`, this.password);
+                            this.showAlert('Sucesso', 'Impressão digital registrada!');
+                        }
+                    } catch (e) { this.showAlert('Cancelado', 'A configuração da biometria falhou ou foi cancelada.'); }
+                },
+
+                async loginBiometrico() {
+                    if (this.profileName.length < 2) return this.loginError = 'Digite o Nome da Empresa primeiro.';
+                    const senhaSalva = localStorage.getItem(`financex-pj-bio-${this.profileName.toUpperCase()}`);
+                    if (!senhaSalva) return this.loginError = 'Biometria não configurada para este perfil.';
+                    if (location.protocol === 'file:') return this.loginError = 'A biometria exige HTTPS (GitHub Pages).';
+                    try {
+                        const publicKey = { challenge: new Uint8Array(32), rpId: window.location.hostname || "localhost", userVerification: "required" };
+                        const credencial = await navigator.credentials.get({ publicKey });
+                        if (credencial) { this.password = senhaSalva; this.login(); }
+                    } catch (e) { this.loginError = 'Autenticação cancelada.'; }
+                },
+
+                async editarSaldo() {
+                    const novoSaldoStr = await this.showPrompt('Ajustar Caixa', 'Digite o valor real no caixa hoje:');
+                    if (novoSaldoStr === null || novoSaldoStr.trim() === '') return;
+                    const novoSaldo = parseFloat(novoSaldoStr);
+                    if (isNaN(novoSaldo)) return this.showAlert('Erro', 'Valor inválido.');
+                    const diferenca = novoSaldo - this.saldoTotal;
+                    if (diferenca === 0) return;
+                    this.transacoes.unshift({ id: Date.now(), tipo: diferenca > 0 ? 'entrada' : 'saida', valor: Math.abs(diferenca), categoria: 'Ajuste de Caixa', descricao: 'Alinhamento contábil', data: new Date().toISOString() });
+                    this.salvar();
+                },
+
+                get profileKey() { return `financex-pj-profile-${this.profileName.toUpperCase()}-enc`; },
+                get categoriesKey() { return `financex-pj-cats-${this.profileName.toUpperCase()}`; },
+                
+                async criarPerfil() {
+                    if (this.profileName.length < 2 || this.password.length < 4) return this.loginError = 'Dados insuficientes.';
+                    if (localStorage.getItem(this.profileKey)) return this.showAlert('Erro', 'Perfil já cadastrado.');
+                    if (await this.showConfirm('Criar Perfil PJ?', `Nome: ${this.profileName}`, 'Criar')) {
+                        this.isLoggedIn = true;
+                        this.transacoes = [];
+                        this.categorias = ['Serviços Prestados', 'Venda de Produtos', 'Fornecedores', 'Impostos (DAS/NFS)', 'Software/Hospedagem', 'Equipamentos', 'Marketing/Ads', 'Pró-labore', 'Ajuste de Caixa']; 
+                        this.form.categoria = this.categorias[0];
+                        this.salvar();
+                        this.loginError = '';
+                        this.$nextTick(() => this.atualizarGraficoDashboard()); // Força render do gráfico no 1º acesso
+                    }
+                },
+                login() {
+                    if (!localStorage.getItem(this.profileKey)) return this.loginError = 'Perfil não encontrado.';
+                    try { 
+                        this.carregarDados(); 
+                        this.isLoggedIn = true; 
+                        this.loginError = ''; 
+                        this.$nextTick(() => this.atualizarGraficoDashboard()); // Renderiza o gráfico pós-login
+                    } catch { this.loginError = 'Senha incorreta ou dados corrompidos.'; }
+                },
+                logout() { this.salvar(); this.isLoggedIn = false; this.profileName = ''; this.password = ''; this.termoPesquisaAno = ''; if(this.graficoInstancia) { this.graficoInstancia.destroy(); this.graficoInstancia = null; } },
+                criptografar(dados) { return CryptoJS.AES.encrypt(JSON.stringify(dados), this.password).toString(); },
+                descriptografar(dados) { return JSON.parse(CryptoJS.AES.decrypt(dados, this.password).toString(CryptoJS.enc.Utf8)); },
+                carregarDados() {
+                    this.transacoes = this.descriptografar(localStorage.getItem(this.profileKey));
+                    this.categorias = JSON.parse(localStorage.getItem(this.categoriesKey)) || ['Geral'];
+                    this.form.categoria = this.categorias[0];
+                },
+                salvar() {
+                    if (!this.isLoggedIn) return;
+                    localStorage.setItem(this.profileKey, this.criptografar(this.transacoes));
+                    localStorage.setItem(this.categoriesKey, JSON.stringify(this.categorias));
+                },
+
+                get saldoTotal() { return this.transacoes.reduce((a, t) => t.tipo === 'entrada' ? a + t.valor : a - t.valor, 0); },
+                get dadosAnuais() {
+                    let e = 0, s = 0;
+                    this.transacoes.forEach(t => { if (new Date(t.data).getFullYear() === this.anoAtual) t.tipo === 'entrada' ? e += t.valor : s += t.valor; });
+                    return { entradas: e, saidas: s };
+                },
+                get resumoMensal() {
+                    let e = 0, s = 0;
+                    this.transacoes.forEach(t => {
+                        const d = new Date(t.data);
+                        if (d.getMonth() === this.dataVisualizacao.getMonth() && d.getFullYear() === this.anoAtual) t.tipo === 'entrada' ? e += t.valor : s += t.valor;
+                    });
+                    return { entradas: e, saidas: s };
+                },
+                get nomeMesAtual() { return this.dataVisualizacao.toLocaleDateString('pt-BR', { month: 'long' }); },
+                get anoAtual() { return this.dataVisualizacao.getFullYear(); },
+                
+                get transacoesFiltradasMes() {
+                    return this.transacoes.filter(t => {
+                        const d = new Date(t.data);
+                        return d.getMonth() === this.dataVisualizacao.getMonth() && d.getFullYear() === this.anoAtual && (this.filtroCategoriaMes === '' || t.categoria === this.filtroCategoriaMes);
+                    }).sort((a, b) => new Date(b.data) - new Date(a.data));
+                },
+
+                get resultadoPesquisaAno() {
+                    if (!this.termoPesquisaAno.trim()) return { transacoes: [], saldo: 0 };
+                    const termo = this.termoPesquisaAno.toLowerCase();
+                    const filtradas = this.transacoes.filter(t => {
+                        const noAno = new Date(t.data).getFullYear() === this.anoAtual;
+                        const matchDesc = t.descricao && t.descricao.toLowerCase().includes(termo);
+                        const matchCat = t.categoria && t.categoria.toLowerCase().includes(termo);
+                        return noAno && (matchDesc || matchCat);
+                    }).sort((a, b) => new Date(b.data) - new Date(a.data));
+                    const saldo = filtradas.reduce((acc, t) => t.tipo === 'entrada' ? acc + t.valor : acc - t.valor, 0);
+                    return { transacoes: filtradas, saldo: saldo };
+                },
+
+                mudarMes(d) { this.dataVisualizacao.setMonth(this.dataVisualizacao.getMonth() + d); this.dataVisualizacao = new Date(this.dataVisualizacao); },
+                
+                adicionarTransacao() {
+                    if (!this.form.valor) return;
+                    this.ultimoValor = this.form.valor;
+                    const d = new Date(this.dataVisualizacao);
+                    d.setHours(new Date().getHours(), new Date().getMinutes());
+                    this.transacoes.unshift({ id: Date.now(), tipo: this.form.tipo, valor: parseFloat(this.form.valor), categoria: this.form.categoria, descricao: this.form.descricao, data: d.toISOString() });
+                    this.salvar(); this.form.valor = ''; this.form.descricao = '';
+                },
+
+                async removerPrompt(id) { if (await this.showConfirm('Apagar?', 'Excluir o registro fiscal?')) { this.transacoes = this.transacoes.filter(t => t.id !== id); this.salvar(); } },
+                async limparDados(escopo) {
+                    if (await this.showConfirm('Atenção', 'Deseja apagar permanentemente os dados selecionados?')) {
+                        if(escopo === 'tudo') this.transacoes = [];
+                        else if(escopo === 'ano') this.transacoes = this.transacoes.filter(t => new Date(t.data).getFullYear() !== this.anoAtual);
+                        else this.transacoes = this.transacoes.filter(t => new Date(t.data).getMonth() !== this.dataVisualizacao.getMonth());
+                        this.salvar();
+                    }
+                },
+                adicionarCategoria() { if (this.novaCategoria) { this.categorias.push(this.novaCategoria); this.salvar(); this.novaCategoria = ''; } },
+                async removerCategoria(idx) { if (await this.showConfirm('Remover?', 'Excluir categoria corporativa?')) { this.categorias.splice(idx, 1); this.salvar(); } },
+                
+                exportarDados() {
+                    const blob = new Blob([this.criptografar(this.transacoes)], { type: "application/json" });
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup_pj_${this.profileName}.json`; a.click();
+                },
+                importarDados(event) {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try { this.transacoes = this.descriptografar(e.target.result); this.salvar(); this.showAlert('Sucesso', 'Base de dados restaurada!'); } catch { this.showAlert('Erro', 'Senha ou arquivo corrompido.'); }
+                    };
+                    reader.readAsText(event.target.files[0]);
+                },
+                formatarMoeda(v) { return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); },
+                formatarDataDia(d) { return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); },
+                formatarDataCompleta(d) { return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+            }
+        }
+    </script>
+</body>
+</html>
