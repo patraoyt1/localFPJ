@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Financeiro Seguro</title>
 
-<meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -58,7 +58,6 @@
                     <div class="flex items-center gap-2">
                         <button @click="selecionarUsuario(user)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-left p-4 rounded-lg transition border border-gray-700 flex justify-between items-center">
                             <span class="font-bold text-blue-300" x-text="user.nome"></span>
-                            <i x-show="user.biometria" class="fa-solid fa-fingerprint text-green-400"></i>
                         </button>
                         <button @click="excluirUsuario(user.nome)" class="bg-red-900/30 text-red-400 p-4 rounded-lg hover:bg-red-600 hover:text-white transition">
                             <i class="fa-solid fa-trash"></i>
@@ -83,17 +82,9 @@
             <div x-show="usuarioSelecionado" class="w-full mt-4 border-t border-gray-700 pt-6">
                 <p class="text-sm text-center text-gray-400 mb-4">Entrando como: <strong class="text-white" x-text="usuarioSelecionado?.nome"></strong></p>
                 
-                <div x-show="!usuarioSelecionado?.biometria" class="mb-4">
+                <div class="mb-4">
                     <input x-model="senhaTentativa" @keydown.enter="fazerLogin()" type="password" placeholder="Digite sua senha" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-2 border border-gray-700 focus:border-blue-500 outline-none">
                     <button @click="fazerLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition">Entrar</button>
-                </div>
-
-                <div x-show="usuarioSelecionado?.biometria" class="text-center">
-                    <p class="text-xs text-gray-500 mb-4">Clique na digital para validar (Simulação)</p>
-                    <button @click="fazerLoginBiometria()" class="w-20 h-20 bg-gray-800 rounded-full border-2 border-green-500 flex items-center justify-center hover:bg-green-900/30 transition mx-auto group">
-                        <i class="fa-solid fa-fingerprint text-4xl text-green-500 group-hover:scale-110 transition"></i>
-                    </button>
-                    <button @click="usuarioSelecionado.biometria = false" class="text-[10px] text-gray-500 mt-4 underline">Usar senha ao invés disso</button>
                 </div>
             </div>
             <p x-show="erroLogin" class="text-red-400 text-sm mt-4 text-center font-bold" x-text="erroLogin"></p>
@@ -105,7 +96,7 @@
             <!-- Cabeçalho e Saldo Atual -->
             <div class="bg-gray-900 p-6 rounded-2xl border border-gray-700 text-center relative shadow-lg">
                 <p class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-1">
-                    Olá, <span x-text="perfilAtivo.nome" class="text-blue-400"></span>
+                    Olá, <span x-text="perfilAtivo?.nome" class="text-blue-400"></span>
                 </p>
                 <div class="flex items-center justify-center gap-3">
                     <h2 class="text-4xl font-black text-white" x-text="formatarMoeda(saldoTotal)"></h2>
@@ -115,14 +106,6 @@
                 </div>
                 
                 <button @click="logout()" class="absolute top-4 right-4 text-gray-500 hover:text-red-400 transition" title="Sair"><i class="fa-solid fa-power-off"></i></button>
-
-                <div x-show="!perfilAtivo.biometria && mostrarAlertaBiometria" class="mt-4 bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg text-sm flex items-center justify-between">
-                    <span class="text-blue-200">Deseja cadastrar impressão digital?</span>
-                    <div class="flex gap-2">
-                        <button @click="cadastrarBiometria()" class="bg-blue-600 px-3 py-1 rounded text-white font-bold hover:bg-blue-500">Sim</button>
-                        <button @click="mostrarAlertaBiometria = false" class="bg-gray-700 px-3 py-1 rounded text-gray-300 hover:bg-gray-600">Não</button>
-                    </div>
-                </div>
             </div>
 
             <!-- Botões de Backup e Restauração -->
@@ -132,7 +115,7 @@
                 </button>
                 <label class="flex-1 bg-gray-800 border border-gray-700 text-sm text-gray-300 p-3 rounded-lg hover:bg-green-600 hover:text-white transition flex justify-center items-center gap-2 cursor-pointer font-bold shadow-md">
                     <i class="fa-solid fa-upload"></i> Restaurar
-                    <input type="file" @change="importarBackup($event)" accept=".enc" class="hidden">
+                    <input type="file" @change="importarBackup($event)" accept=".enc, .json" class="hidden">
                 </label>
             </div>
 
@@ -264,7 +247,7 @@
     <!-- CryptoJS para criptografar os Backups -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     
-    <!-- Alpine.js (DEFER ADICIONADO PARA CORRIGIR O ERRO DE TELA PRETA) -->
+    <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <script>
@@ -282,7 +265,6 @@
                 perfilAtivo: null,
                 transacoes: [],
                 senhaAtiva: '',
-                mostrarAlertaBiometria: false,
 
                 dataFiltro: new Date(),
                 termoPesquisa: '',
@@ -353,7 +335,7 @@
                         this.erroLogin = 'Este nome de usuário já existe.'; return;
                     }
 
-                    const novoUser = { nome: this.novoNome, biometria: false };
+                    const novoUser = { nome: this.novoNome };
                     this.usuariosSalvos.push(novoUser);
                     this.salvarBancoUsuarios();
                     
@@ -379,20 +361,6 @@
                     }
                 },
 
-                fazerLoginBiometria() {
-                    this.showAlert('Atenção', 'Em um sistema real, a API WebAuthn validaria o rosto/dedo e o backend devolveria a chave de descriptografia. Para essa interface visual, voltaremos para a senha para descriptografar os dados.');
-                    this.usuarioSelecionado.biometria = false; 
-                },
-
-                cadastrarBiometria() {
-                    this.perfilAtivo.biometria = true;
-                    const index = this.usuariosSalvos.findIndex(u => u.nome === this.perfilAtivo.nome);
-                    if(index > -1) this.usuariosSalvos[index].biometria = true;
-                    this.salvarBancoUsuarios();
-                    this.mostrarAlertaBiometria = false;
-                    this.showAlert('Sucesso', 'Biometria registrada com sucesso no dispositivo!');
-                },
-
                 iniciarSessao(senha, dados) {
                     this.senhaAtiva = senha;
                     this.perfilAtivo = this.usuarioSelecionado;
@@ -400,8 +368,6 @@
                     this.isLoggedIn = true;
                     this.erroLogin = '';
                     this.dataFiltro = new Date();
-                    
-                    if(!this.perfilAtivo.biometria) this.mostrarAlertaBiometria = true;
                 },
 
                 logout() {
@@ -473,6 +439,40 @@
                         this.formLancamento.tipo = anterior.tipo;
                     }
                 },
+                
+                // ----- FEEDBACK SONORO (WEB AUDIO API) -----
+                tocarSom(tipo) {
+                    // Inicializa o contexto de áudio do navegador
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return; // Segurança caso o navegador seja muito antigo
+                    
+                    const ctx = new AudioContext();
+                    const osc = ctx.createOscillator();
+                    const gainNode = ctx.createGain();
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+                    
+                    if (tipo === 'entrada') {
+                        // Som de "Lucro/Moeda" (Agudo e agradável)
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(800, ctx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                        osc.start(ctx.currentTime);
+                        osc.stop(ctx.currentTime + 0.1);
+                    } else {
+                        // Som de "Gasto/Saída" (Grave e sutil)
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(400, ctx.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
+                        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                        osc.start(ctx.currentTime);
+                        osc.stop(ctx.currentTime + 0.15);
+                    }
+                },
 
                 salvarLancamento() {
                     if(!this.formLancamento.nome || !this.formLancamento.valor || parseFloat(this.formLancamento.valor) <= 0) return;
@@ -490,6 +490,10 @@
                     });
 
                     this.salvarTransacoesLocal();
+                    
+                    // Dispara o efeito sonoro de acordo com o tipo (entrada ou saida)
+                    this.tocarSom(this.formLancamento.tipo);
+
                     this.formLancamento.nome = ''; this.formLancamento.valor = '';
                     this.mostrarSugestoes = false;
                 },
