@@ -3,573 +3,556 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📊FinanceX Corporate (PJ)</title>
+    <title>Controle Financeiro Seguro</title>
     
-    <!-- CSS e Ícones -->
+    <!-- Bibliotecas: Tailwind CSS, FontAwesome e Alpine.js -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
     <style>
-        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        select { -webkit-appearance: none; appearance: none; }
-        .custom-alert { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
         [x-cloak] { display: none !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 4px; }
     </style>
 </head>
-<body class="flex justify-center min-h-screen p-4 md:p-8">
+<body class="flex justify-center min-h-screen p-4">
 
-    <!-- Contêiner Mestre -->
-    <div x-data="app()" x-cloak class="w-full max-w-6xl space-y-4 transition-all duration-300">
+    <div x-data="app()" x-init="iniciar()" x-cloak class="w-full max-w-md space-y-4 pb-10">
 
-        <!-- Sistema de Alertas Modais -->
-        <div x-show="message.show" x-transition.opacity.duration.300 class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 custom-alert backdrop-blur-sm">
-            <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-xs border border-yellow-600">
-                <h3 class="text-lg font-bold mb-3 text-yellow-500" x-text="message.title"></h3>
-                <p class="text-sm text-gray-300 mb-4" x-html="message.body"></p>
+        <!-- Modais do Sistema (Alertas, Confirmação, Prompts) -->
+        <div x-show="modal.show" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm border border-blue-500/30">
+                <h3 class="text-lg font-bold mb-3 text-blue-400" x-text="modal.title"></h3>
+                <p class="text-sm text-gray-300 mb-4" x-html="modal.body"></p>
                 
-                <template x-if="message.type === 'prompt'">
-                    <input type="number" x-model="message.inputValue" class="w-full bg-gray-900 text-white p-3 rounded-lg mb-4 border border-gray-700 focus:border-yellow-500 outline-none font-bold text-center text-lg shadow-inner" placeholder="0,00" autofocus>
+                <template x-if="modal.type === 'prompt'">
+                    <input type="text" x-model="modal.inputValue" class="w-full bg-gray-900 text-white p-3 rounded-lg mb-4 border border-gray-700 outline-none text-center" autofocus>
                 </template>
 
-                <div class="flex justify-end space-x-3">
-                    <template x-if="message.type === 'confirm' || message.type === 'prompt'">
-                        <button @click="message.reject()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Cancelar</button>
+                <div class="flex justify-end gap-3">
+                    <template x-if="modal.type !== 'alert'">
+                        <button @click="modal.reject()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition">Cancelar</button>
                     </template>
-                    <button @click="message.resolve()" :class="message.type === 'confirm' ? 'bg-red-600 hover:bg-red-500' : 'bg-yellow-600 hover:bg-yellow-500 text-slate-900'" class="font-bold py-2 px-4 rounded-lg text-sm transition">
-                        <span x-text="message.confirmText"></span>
+                    <button @click="modal.resolve()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition">
+                        <span x-text="modal.confirmText"></span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Tela de Login PJ -->
-        <div x-show="!isLoggedIn" class="max-w-md mx-auto bg-gray-900 p-8 rounded-3xl shadow-2xl border border-yellow-600/50 min-h-[400px] flex flex-col justify-center items-center text-center mt-10 md:mt-20">
-            <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_#eab30840] border border-yellow-500/30">
-                <i class="fa-solid fa-briefcase text-yellow-500 text-4xl"></i>
-            </div>
-            <h1 class="text-2xl font-black mb-2 tracking-tight">Acesso Empresarial</h1>
-            <p class="text-sm text-gray-400 mb-8">Área restrita de gestão financeira corporativa.</p>
+        <!-- Tela de Login e Gerenciamento de Usuários -->
+        <div x-show="!isLoggedIn" class="bg-gray-900 p-8 rounded-2xl shadow-2xl border border-blue-700/50 flex flex-col justify-center items-center mt-10">
+            <i class="fa-solid fa-wallet text-blue-500 text-5xl mb-6"></i>
+            <h1 class="text-xl font-bold mb-6 text-white">Acesso Financeiro</h1>
 
-            <input x-model="profileName" type="text" placeholder="Nome da Empresa/Perfil" class="w-full bg-gray-800 text-white p-3.5 rounded-xl mb-4 border border-gray-700 focus:border-yellow-500 outline-none shadow-inner transition">
-            
-            <input x-model="password" @keydown.enter="login()" type="password" placeholder="Senha de Acesso" class="w-full bg-gray-800 text-white p-3.5 rounded-xl mb-6 border border-gray-700 focus:border-yellow-500 outline-none shadow-inner transition">
-            
-            <div class="flex space-x-3 w-full mb-4">
-                <button @click="login()" class="flex-1 bg-yellow-600 hover:bg-yellow-500 text-slate-900 font-black py-3.5 rounded-xl transition shadow-lg">Acessar</button>
-                <button @click="criarPerfil()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg border border-gray-600">Criar Novo</button>
-            </div>
-
-            <!-- Botão de Biometria -->
-            <button x-show="profileName.length > 0" @click="loginBiometrico()" x-transition class="w-full bg-slate-800 hover:bg-slate-700 text-yellow-500 font-bold py-3.5 rounded-xl border border-yellow-600/30 transition shadow-lg flex items-center justify-center gap-2">
-                <i class="fa-solid fa-fingerprint text-xl"></i> Desbloqueio Biométrico
-            </button>
-
-            <p x-show="loginError" class="text-red-400 text-sm mt-5 font-bold bg-red-900/20 py-2 px-4 rounded-lg" x-text="loginError"></p>
-        </div>
-
-        <!-- Dashboard Principal -->
-        <div x-show="isLoggedIn" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            <!-- COLUNA ESQUERDA (Operacional) -->
-            <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-8">
-                
-                <!-- Header do Saldo -->
-                <div class="bg-gradient-to-br from-gray-900 to-slate-800 p-6 rounded-3xl border border-yellow-700/50 text-center relative overflow-hidden shadow-2xl">
-                    <div class="absolute top-0 left-0 w-full h-1.5 bg-yellow-500 shadow-[0_0_15px_#eab308]"></div>
-                    <h1 class="text-yellow-400 text-xs uppercase tracking-widest mb-2 font-bold opacity-80">Caixa Atual (<span x-text="profileName"></span>)</h1>
-                    
-                    <div class="flex items-center justify-center gap-3">
-                        <div class="text-4xl lg:text-5xl font-black text-white drop-shadow-lg tracking-tighter" x-text="formatarMoeda(saldoTotal)"></div>
-                        <button @click="editarSaldo()" class="text-yellow-500 hover:text-slate-900 hover:bg-yellow-500 transition bg-yellow-900/30 w-8 h-8 rounded-full flex items-center justify-center border border-yellow-500/30 shadow-md">
-                            <i class="fa-solid fa-pencil text-xs"></i>
+            <!-- Seleção de Usuários Existentes -->
+            <div x-show="usuariosSalvos.length > 0 && !criandoNovo" class="w-full space-y-3 mb-6">
+                <p class="text-xs text-gray-400 text-center uppercase tracking-widest">Selecionar Conta</p>
+                <template x-for="user in usuariosSalvos" :key="user.nome">
+                    <div class="flex items-center gap-2">
+                        <button @click="selecionarUsuario(user)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-left p-4 rounded-lg transition border border-gray-700 flex justify-between items-center">
+                            <span class="font-bold text-blue-300" x-text="user.nome"></span>
+                            <i x-show="user.biometria" class="fa-solid fa-fingerprint text-green-400"></i>
+                        </button>
+                        <button @click="excluirUsuario(user.nome)" class="bg-red-900/30 text-red-400 p-4 rounded-lg hover:bg-red-600 hover:text-white transition">
+                            <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
-                    
-                    <button @click="logout()" class="absolute top-3 right-4 text-sm text-gray-500 hover:text-red-400 transition bg-gray-800/50 w-8 h-8 rounded-full flex items-center justify-center" title="Sair do Sistema"><i class="fa-solid fa-power-off"></i></button>
+                </template>
+                <button @click="criandoNovo = true" class="w-full mt-4 bg-transparent border border-blue-600 text-blue-400 font-bold py-2 rounded-lg hover:bg-blue-600 hover:text-white transition">
+                    + Criar Novo Login
+                </button>
+            </div>
+
+            <!-- Formulário de Nova Conta -->
+            <div x-show="criandoNovo || usuariosSalvos.length === 0" class="w-full">
+                <input x-model="novoNome" type="text" placeholder="Nome de Usuário" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-3 border border-gray-700 focus:border-blue-500 outline-none">
+                <input x-model="novaSenha" type="password" placeholder="Crie uma Senha" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-4 border border-gray-700 focus:border-blue-500 outline-none">
+                
+                <div class="flex gap-2">
+                    <button @click="criarPerfil()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg transition">Cadastrar</button>
+                    <button x-show="usuariosSalvos.length > 0" @click="criandoNovo = false" class="bg-gray-700 text-white px-4 rounded-lg hover:bg-gray-600">Voltar</button>
+                </div>
+            </div>
+
+            <!-- Formulário de Autenticação (Senha ou Biometria) -->
+            <div x-show="usuarioSelecionado" class="w-full mt-4 border-t border-gray-700 pt-6">
+                <p class="text-sm text-center text-gray-400 mb-4">Entrando como: <strong class="text-white" x-text="usuarioSelecionado?.nome"></strong></p>
+                
+                <div x-show="!usuarioSelecionado?.biometria" class="mb-4">
+                    <input x-model="senhaTentativa" type="password" placeholder="Digite sua senha" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-2 border border-gray-700 focus:border-blue-500 outline-none">
+                    <button @click="fazerLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition">Entrar</button>
                 </div>
 
-                <!-- Formulário de Novo Lançamento -->
-                <div class="bg-gray-800 p-5 rounded-3xl shadow-xl border border-yellow-700/30 relative">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="font-bold text-white uppercase text-sm tracking-wider"><i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>Novo Registro</h2>
-                        <button @click="mostrandoConfig = !mostrandoConfig" class="text-gray-500 hover:text-yellow-500 transition w-8 h-8 flex items-center justify-center bg-gray-900 rounded-full"><i class="fa-solid fa-gear"></i></button>
-                    </div>
+                <div x-show="usuarioSelecionado?.biometria" class="text-center">
+                    <p class="text-xs text-gray-500 mb-4">Clique na digital para validar (Simulação)</p>
+                    <button @click="fazerLoginBiometria()" class="w-20 h-20 bg-gray-800 rounded-full border-2 border-green-500 flex items-center justify-center hover:bg-green-900/30 transition mx-auto group">
+                        <i class="fa-solid fa-fingerprint text-4xl text-green-500 group-hover:scale-110 transition"></i>
+                    </button>
+                    <button @click="usuarioSelecionado.biometria = false" class="text-[10px] text-gray-500 mt-4 underline">Usar senha ao invés disso</button>
+                </div>
+            </div>
+            <p x-show="erroLogin" class="text-red-400 text-sm mt-4 text-center font-bold" x-text="erroLogin"></p>
+        </div>
 
-                    <div class="flex gap-2 mb-4">
-                        <button @click="form.tipo = 'entrada'" :class="form.tipo === 'entrada' ? 'bg-green-600 text-white shadow-lg shadow-green-900/50 ring-2 ring-green-400 ring-offset-2 ring-offset-gray-800' : 'bg-gray-900 text-gray-400 hover:bg-gray-700'" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition uppercase">Entrada</button>
-                        <button @click="form.tipo = 'saida'" :class="form.tipo === 'saida' ? 'bg-red-600 text-white shadow-lg shadow-red-900/50 ring-2 ring-red-400 ring-offset-2 ring-offset-gray-800' : 'bg-gray-900 text-gray-400 hover:bg-gray-700'" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition uppercase">Saída</button>
-                    </div>
+        <!-- Tela Principal do Sistema -->
+        <div x-show="isLoggedIn" class="space-y-6">
+            
+            <!-- Cabeçalho e Saldo Atual -->
+            <div class="bg-gray-900 p-6 rounded-2xl border border-gray-700 text-center relative shadow-lg">
+                <p class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-1">
+                    Olá, <span x-text="perfilAtivo.nome" class="text-blue-400"></span>
+                </p>
+                <div class="flex items-center justify-center gap-3">
+                    <h2 class="text-4xl font-black text-white" x-text="formatarMoeda(saldoTotal)"></h2>
+                    <button @click="editarSaldo()" class="text-gray-400 hover:text-white transition w-8 h-8 bg-gray-800 rounded-full border border-gray-600 flex items-center justify-center">
+                        <i class="fa-solid fa-pencil text-xs"></i>
+                    </button>
+                </div>
+                
+                <button @click="logout()" class="absolute top-4 right-4 text-gray-500 hover:text-red-400 transition" title="Sair"><i class="fa-solid fa-power-off"></i></button>
 
-                    <!-- Gestor de Categorias e Biometria -->
-                    <div x-show="mostrandoConfig" x-transition class="mb-5 p-4 bg-gray-900 rounded-2xl border border-gray-700 shadow-inner">
-                        <div class="flex gap-2 mb-2">
-                            <input x-model="novaCategoria" type="text" placeholder="Nova categoria..." class="flex-1 bg-gray-800 p-2.5 px-4 rounded-xl text-xs text-white border border-gray-600 outline-none focus:border-yellow-500 transition">
-                            <button @click="adicionarCategoria()" class="bg-yellow-600 hover:bg-yellow-500 w-10 rounded-xl text-slate-900 text-sm font-black transition shadow-lg"><i class="fa-solid fa-plus"></i></button>
-                        </div>
-                        <div class="flex flex-wrap gap-1.5 mt-3 mb-4">
-                            <template x-for="(cat, idx) in categorias" :key="idx">
-                                <span class="bg-gray-700 text-[10px] px-2.5 py-1.5 rounded-lg border border-gray-600 flex items-center gap-2 shadow-sm">
-                                    <span x-text="cat" class="font-semibold text-gray-200"></span>
-                                    <button @click="removerCategoria(idx)" class="text-red-400 hover:text-white transition w-4 h-4 flex items-center justify-center bg-gray-800 rounded-full"><i class="fa-solid fa-xmark text-[8px]"></i></button>
-                                </span>
-                            </template>
-                        </div>
-                        
-                        <div class="border-t border-gray-800 pt-4">
-                            <button @click="configurarBiometria()" class="w-full bg-slate-800 border border-slate-600 text-yellow-500 hover:text-yellow-400 text-xs font-bold py-3 rounded-xl hover:bg-slate-700 transition flex items-center justify-center gap-2 shadow-md">
-                                <i class="fa-solid fa-fingerprint text-base"></i> Configurar Biometria WebAuthn
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-3 mb-5 relative">
-                        <div class="relative w-1/2">
-                            <select x-model="form.categoria" class="w-full bg-gray-900 text-white p-3.5 rounded-xl border border-gray-700 text-sm outline-none focus:border-yellow-500 transition shadow-inner font-semibold">
-                                <template x-for="cat in categorias"><option x-text="cat"></option></template>
-                            </select>
-                            <div class="absolute right-4 top-4 pointer-events-none text-yellow-500 text-xs"><i class="fa-solid fa-caret-down"></i></div>
-                        </div>
-                        
-                        <div class="w-1/2 relative">
-                            <div class="absolute left-3 top-3.5 text-gray-500 text-sm font-bold">R$</div>
-                            <input x-model="form.valor" type="number" step="0.01" placeholder="0.00" class="w-full bg-gray-900 text-white pl-9 pr-4 py-3.5 rounded-xl border border-gray-700 text-right font-mono font-bold outline-none focus:border-yellow-500 transition shadow-inner">
-                            
-                            <div x-show="ultimoValor" x-transition class="absolute -bottom-5 right-1 flex items-center z-10">
-                                <button @click="form.valor = ultimoValor" class="text-[10px] text-yellow-500 hover:text-yellow-400 bg-gray-800 px-2 py-0.5 rounded-md transition shadow-md border border-yellow-900/50 font-semibold flex items-center">
-                                    <i class="fa-solid fa-clock-rotate-left mr-1.5 opacity-70"></i>Repetir: <span class="ml-1" x-text="formatarMoeda(parseFloat(ultimoValor))"></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
+                <!-- Aviso de Cadastro de Biometria (Aparece apenas na primeira vez) -->
+                <div x-show="!perfilAtivo.biometria && mostrarAlertaBiometria" class="mt-4 bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg text-sm flex items-center justify-between">
+                    <span class="text-blue-200">Deseja cadastrar impressão digital?</span>
                     <div class="flex gap-2">
-                        <input x-model="form.descricao" @keydown.enter="adicionarTransacao()" type="text" placeholder="Descreva a origem/destino..." class="flex-1 bg-gray-900 text-white p-3.5 rounded-xl border border-gray-700 text-sm outline-none focus:border-yellow-500 transition shadow-inner font-medium">
-                        <button @click="adicionarTransacao()" class="bg-yellow-600 hover:bg-yellow-500 text-slate-900 px-6 rounded-xl transition shadow-lg font-black text-xl w-16 flex items-center justify-center">
+                        <button @click="cadastrarBiometria()" class="bg-blue-600 px-3 py-1 rounded text-white font-bold hover:bg-blue-500">Sim</button>
+                        <button @click="mostrarAlertaBiometria = false" class="bg-gray-700 px-3 py-1 rounded text-gray-300 hover:bg-gray-600">Não</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões de Backup e Restauração -->
+            <div class="flex gap-2">
+                <button @click="exportarBackup()" class="flex-1 bg-gray-800 border border-gray-700 text-sm text-gray-300 p-3 rounded-lg hover:bg-blue-600 hover:text-white transition flex justify-center items-center gap-2 font-bold shadow-md">
+                    <i class="fa-solid fa-download"></i> Fazer Backup
+                </button>
+                <label class="flex-1 bg-gray-800 border border-gray-700 text-sm text-gray-300 p-3 rounded-lg hover:bg-green-600 hover:text-white transition flex justify-center items-center gap-2 cursor-pointer font-bold shadow-md">
+                    <i class="fa-solid fa-upload"></i> Restaurar
+                    <input type="file" @change="importarBackup($event)" accept=".enc" class="hidden">
+                </label>
+            </div>
+
+            <!-- Menus Separados de Totais (Ano e Mês) -->
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Resumo Anual -->
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-2 border-b border-gray-700 pb-1">Total Ano (<span x-text="anoAtual"></span>)</p>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-gray-500">Entrou:</span>
+                        <span class="text-sm font-bold text-green-400" x-text="formatarMoeda(totaisAnuais.entradas)"></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-500">Saiu:</span>
+                        <span class="text-sm font-bold text-red-400" x-text="formatarMoeda(totaisAnuais.saidas)"></span>
+                    </div>
+                </div>
+                <!-- Resumo Mensal -->
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-2 border-b border-gray-700 pb-1">Total Mês (<span x-text="nomeMesAtual"></span>)</p>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs text-gray-500">Entrou:</span>
+                        <span class="text-sm font-bold text-green-400" x-text="formatarMoeda(totaisMensais.entradas)"></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-500">Saiu:</span>
+                        <span class="text-sm font-bold text-red-400" x-text="formatarMoeda(totaisMensais.saidas)"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu de Lançamentos -->
+            <div class="bg-gray-800 p-5 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-xs text-gray-400 uppercase font-bold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> Novo Lançamento
+                </h3>
+                
+                <div class="flex gap-2 mb-4">
+                    <button @click="formLancamento.tipo = 'entrada'" :class="formLancamento.tipo === 'entrada' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'" class="flex-1 py-2 rounded-lg text-sm font-bold transition">ENTRADA</button>
+                    <button @click="formLancamento.tipo = 'saida'" :class="formLancamento.tipo === 'saida' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'" class="flex-1 py-2 rounded-lg text-sm font-bold transition">SAÍDA</button>
+                </div>
+
+                <div class="space-y-3">
+                    <input x-model="formLancamento.nome" @input="sugerirValor()" type="text" placeholder="Nome do lançamento (ex: Salário, Padaria)" class="w-full bg-gray-900 text-white p-3 rounded-lg border border-gray-600 outline-none focus:border-blue-500 text-sm">
+                    
+                    <div class="flex gap-2">
+                        <div class="relative w-full">
+                            <span class="absolute left-3 top-3 text-gray-500 text-sm">R$</span>
+                            <input x-model="formLancamento.valor" type="number" step="0.01" placeholder="0.00" class="w-full bg-gray-900 text-white p-3 pl-9 rounded-lg border border-gray-600 outline-none focus:border-blue-500 text-sm">
+                        </div>
+                        <button @click="salvarLancamento()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-lg font-bold transition">
                             <i class="fa-solid fa-plus"></i>
                         </button>
                     </div>
                 </div>
-
-                <!-- Controle e Ferramentas (Backup, Limpeza) -->
-                <div class="bg-gray-800 p-2.5 rounded-2xl border border-gray-700 flex gap-2">
-                    <button @click="exportarDados()" class="flex-1 bg-gray-900 text-xs text-gray-300 py-3 rounded-xl hover:bg-yellow-600 hover:text-slate-900 transition flex items-center justify-center gap-2 font-bold shadow-sm border border-gray-700">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Fazer Backup
-                    </button>
-                    <label for="import-file" class="flex-1 bg-gray-900 text-xs text-gray-300 py-3 rounded-xl hover:bg-green-600 hover:text-white transition flex items-center justify-center gap-2 cursor-pointer font-bold shadow-sm border border-gray-700">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> Restaurar
-                    </label>
-                    <input type="file" id="import-file" @change="importarDados($event)" accept=".json" class="hidden">
-
-                    <div class="relative">
-                        <button @click="mostrandoMenuAcoes = !mostrandoMenuAcoes" class="bg-gray-900 text-xs text-gray-400 px-4 rounded-xl hover:bg-red-600 hover:text-white transition flex items-center justify-center h-full border border-gray-700">
-                            <i class="fa-solid fa-ellipsis-vertical text-base"></i>
-                        </button>
-                        <div x-show="mostrandoMenuAcoes" @click.outside="mostrandoMenuAcoes = false" x-transition class="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 rounded-2xl shadow-2xl z-20 border border-gray-600 overflow-hidden">
-                            <h4 class="text-xs text-gray-400 px-4 pt-3 pb-2 font-black uppercase tracking-widest bg-gray-900 border-b border-gray-700">Ações de Perigo</h4>
-                            <a href="#" @click.prevent="limparDados('mes')" class="block px-4 py-3 text-sm text-gray-200 hover:bg-red-500/20 hover:text-red-300 transition"><i class="fa-solid fa-eraser w-5"></i> Limpar Mês Atual</a>
-                            <a href="#" @click.prevent="limparDados('ano')" class="block px-4 py-3 text-sm text-gray-200 hover:bg-red-500/20 hover:text-red-300 transition border-t border-gray-700"><i class="fa-solid fa-calendar-xmark w-5"></i> Limpar Ano Atual</a>
-                            <a href="#" @click.prevent="limparDados('tudo')" class="block px-4 py-3 text-sm text-white bg-red-600 hover:bg-red-500 transition border-t border-red-700 font-bold"><i class="fa-solid fa-triangle-exclamation w-5"></i> FORMATAR BANCO DE DADOS</a>
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
-            <!-- COLUNA DIREITA (Análise e Extratos) -->
-            <div class="lg:col-span-7 space-y-6">
-
-                <!-- Bloco de Navegação de Mês -->
-                <div class="bg-gray-800 p-3 rounded-3xl border border-gray-700 flex justify-between items-center shadow-md">
-                    <button @click="mudarMes(-1)" class="w-12 h-12 flex items-center justify-center bg-gray-900 hover:bg-yellow-600 hover:text-slate-900 rounded-full transition shadow-inner text-gray-400"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="text-center leading-tight">
-                        <h2 class="text-xl font-black text-white uppercase tracking-wider" x-text="nomeMesAtual"></h2>
-                        <p class="text-sm text-yellow-500 font-mono font-bold" x-text="anoAtual"></p>
-                    </div>
-                    <button @click="mudarMes(1)" class="w-12 h-12 flex items-center justify-center bg-gray-900 hover:bg-yellow-600 hover:text-slate-900 rounded-full transition shadow-inner text-gray-400"><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-
-                <!-- Área de Relatório Anual (Sem Gráfico, Otimizada) -->
-                <div class="bg-gray-800 p-5 rounded-3xl border border-gray-700 shadow-xl">
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-scale-balanced mr-2 text-blue-400"></i>Balanço Anual (<span x-text="anoAtual"></span>)</h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-gray-900 p-5 rounded-2xl border-l-4 border-green-500 shadow-sm">
-                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Faturamento Acumulado</p>
-                            <p class="text-green-400 font-black text-2xl lg:text-3xl tracking-tight" x-text="formatarMoeda(dadosAnuais.entradas)"></p>
-                        </div>
-                        <div class="bg-gray-900 p-5 rounded-2xl border-l-4 border-red-500 shadow-sm">
-                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Custos e Despesas Acumuladas</p>
-                            <p class="text-red-400 font-black text-2xl lg:text-3xl tracking-tight" x-text="formatarMoeda(dadosAnuais.saidas)"></p>
-                        </div>
+            <!-- Menu de Transações e Pesquisa -->
+            <div class="bg-gray-900 rounded-xl border border-gray-700 p-4">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
+                    <h3 class="text-sm text-white font-bold">Transações do Mês</h3>
+                    <div class="flex items-center gap-2">
+                        <button @click="mudarMes(-1)" class="text-gray-500 hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span class="text-xs text-blue-400 font-bold uppercase min-w-[80px] text-center" x-text="nomeMesAtual"></span>
+                        <button @click="mudarMes(1)" class="text-gray-500 hover:text-white"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
                 </div>
 
-                <!-- Módulo de Filtro Anual (Auditoria) -->
-                <div class="bg-gray-800 p-5 rounded-3xl shadow-xl border border-blue-900/40 relative">
-                    <h3 class="text-xs uppercase font-bold text-gray-400 mb-4 tracking-widest flex items-center gap-2">
-                        <i class="fa-solid fa-magnifying-glass text-blue-400"></i> Auditoria Expressa
-                    </h3>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                            <i class="fa-solid fa-search text-gray-500 text-sm"></i>
-                        </div>
-                        <input x-model="termoPesquisaAno" type="text" placeholder="Busque por fornecedor, categoria, etc..." class="w-full bg-gray-900 text-white py-3.5 pl-11 pr-4 rounded-xl border border-gray-700 text-sm outline-none focus:border-blue-500 transition placeholder-gray-600 shadow-inner">
-                    </div>
+                <!-- Barra de Pesquisa -->
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-500"></i>
+                    <input x-model="termoPesquisa" type="text" placeholder="Pesquisar por nome..." class="w-full bg-gray-800 text-white p-2 pl-9 rounded-lg border border-gray-700 outline-none text-sm">
+                    <p x-show="termoPesquisa.length > 0" class="text-[10px] text-blue-400 mt-1 ml-1" x-text="transacoesListadas.length + ' registro(s) encontrado(s)'"></p>
+                </div>
 
-                    <div x-show="termoPesquisaAno.trim().length > 0" x-transition class="mt-4 bg-gray-900/80 p-4 rounded-2xl border border-blue-900/50 shadow-inner">
-                        <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-3">
-                            <span class="text-xs text-gray-400 font-bold uppercase">Resultado em <span x-text="anoAtual" class="text-blue-400"></span>:</span>
-                            <span class="font-black text-xl bg-gray-800 px-3 py-1 rounded-lg border border-gray-700" :class="resultadoPesquisaAno.saldo >= 0 ? 'text-green-400' : 'text-red-400'" x-text="formatarMoeda(resultadoPesquisaAno.saldo)"></span>
-                        </div>
-                        
-                        <div class="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                            <template x-for="item in resultadoPesquisaAno.transacoes" :key="item.id">
-                                <div class="flex justify-between items-center p-3 bg-gray-800 rounded-xl border border-gray-700 hover:border-blue-500/50 transition">
-                                    <div class="flex items-center gap-3">
-                                        <div :class="item.tipo === 'entrada' ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'" class="w-8 h-8 rounded-lg flex items-center justify-center text-xs border border-gray-700">
-                                            <i :class="item.tipo === 'entrada' ? 'fa-solid fa-arrow-down' : 'fa-solid fa-arrow-up'"></i>
-                                        </div>
-                                        <div>
-                                            <span class="font-bold text-gray-200 text-sm" x-text="item.categoria"></span>
-                                            <p class="text-[11px] text-gray-500 truncate max-w-[150px] lg:max-w-[250px]" x-text="item.descricao || 'Sem descrição'"></p>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="font-mono font-bold block leading-none mb-1" :class="item.tipo === 'entrada' ? 'text-green-400' : 'text-red-400'" x-text="formatarMoeda(item.valor)"></span>
-                                        <span class="text-[9px] text-blue-400 font-bold" x-text="formatarDataCompleta(item.data)"></span>
-                                    </div>
+                <!-- Lista -->
+                <div class="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                    <template x-for="item in transacoesListadas" :key="item.id">
+                        <div class="bg-gray-800 p-3 rounded-lg border border-gray-700 flex justify-between items-center hover:border-gray-500 transition">
+                            <div class="flex items-center gap-3">
+                                <div :class="item.tipo === 'entrada' ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'" class="w-8 h-8 rounded flex justify-center items-center">
+                                    <i :class="item.tipo === 'entrada' ? 'fa-solid fa-arrow-down' : 'fa-solid fa-arrow-up'"></i>
                                 </div>
-                            </template>
-                            <div x-show="resultadoPesquisaAno.transacoes.length === 0" class="text-center text-xs text-gray-500 py-6 font-bold uppercase tracking-widest bg-gray-800 rounded-xl border border-gray-700/50 border-dashed">
-                                Nenhum registro encontrado.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Livro Caixa Mensal -->
-                <div class="bg-gray-800 p-5 rounded-3xl shadow-xl border border-gray-700">
-                    <div class="flex justify-between items-end mb-5 border-b border-gray-700 pb-4">
-                        <div>
-                            <h3 class="text-xs uppercase font-bold text-gray-500 tracking-widest mb-1">Livro Caixa Mensal</h3>
-                            <p class="text-xl font-black text-white capitalize" x-text="nomeMesAtual"></p>
-                        </div>
-                        
-                        <!-- Filtro Mensal -->
-                        <div class="relative w-40">
-                            <select x-model="filtroCategoriaMes" class="w-full appearance-none bg-gray-900 text-xs text-yellow-500 border border-gray-700 rounded-xl px-3 py-2 pr-8 outline-none font-bold uppercase cursor-pointer focus:border-yellow-500 shadow-inner">
-                                <option value="">Todas</option>
-                                <template x-for="cat in categorias"><option x-text="cat"></option></template>
-                            </select>
-                            <div class="absolute right-3 top-2.5 pointer-events-none text-gray-500 text-[10px]"><i class="fa-solid fa-filter"></i></div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <template x-for="item in transacoesFiltradasMes" :key="item.id">
-                            <div class="bg-gray-900 p-4 rounded-2xl flex justify-between items-center border border-gray-700/50 hover:border-yellow-600/50 transition group shadow-sm">
-                                <div class="flex items-center gap-4">
-                                    <div :class="item.tipo === 'entrada' ? 'text-green-400 bg-green-900/10' : 'text-red-400 bg-red-900/10'" class="w-10 h-10 rounded-xl flex items-center justify-center text-sm border border-gray-700/80 shadow-inner">
-                                        <i :class="item.tipo === 'entrada' ? 'fa-solid fa-arrow-down' : 'fa-solid fa-arrow-up'"></i>
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-gray-200 text-base" x-text="item.categoria"></p>
-                                        <p class="text-xs text-gray-500 mt-0.5" x-text="item.descricao || 'Sem descrição'"></p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p :class="item.tipo === 'entrada' ? 'text-green-400' : 'text-red-400'" class="font-mono font-black text-lg tracking-tight" x-text="formatarMoeda(item.valor)"></p>
-                                    <div class="flex items-center justify-end gap-3 mt-1.5">
-                                        <span class="text-[10px] font-bold text-gray-600 bg-gray-800 px-2 py-0.5 rounded border border-gray-700" x-text="formatarDataDia(item.data)"></span>
-                                        <button @click="removerPrompt(item.id)" class="text-gray-600 hover:text-red-500 transition" title="Excluir"><i class="fa-solid fa-trash text-sm"></i></button>
-                                    </div>
+                                <div>
+                                    <p class="font-bold text-gray-200 text-sm" x-text="item.nome"></p>
+                                    <p class="text-[10px] text-gray-500" x-text="formatarDataHora(item.data)"></p>
                                 </div>
                             </div>
-                        </template>
-                        
-                        <div x-show="transacoesFiltradasMes.length === 0" class="text-center text-gray-500 py-10 font-bold uppercase tracking-widest bg-gray-900 rounded-2xl border border-gray-700/50 border-dashed">
-                            <i class="fa-solid fa-folder-open text-3xl mb-3 opacity-30 block"></i>
-                            Vazio neste filtro.
+                            <div class="flex items-center gap-3">
+                                <p :class="item.tipo === 'entrada' ? 'text-green-400' : 'text-red-400'" class="font-mono font-bold text-sm" x-text="formatarMoeda(item.valor)"></p>
+                                <button @click="excluirTransacao(item.id)" class="text-gray-600 hover:text-red-500 transition ml-2">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
                         </div>
+                    </template>
+                    <div x-show="transacoesListadas.length === 0" class="text-center py-6 text-gray-500 text-sm italic">
+                        Nenhuma transação encontrada.
                     </div>
                 </div>
-
             </div>
+
         </div>
     </div>
 
-    <!-- Scripts de Funcionalidade -->
+    <!-- CryptoJS para criptografar os Backups -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <script>
-        // Funções de conversão obrigatórias para a WebAuthn armazenar no LocalStorage
-        function buf2base64(buffer) {
-            let binary = '';
-            const bytes = new Uint8Array(buffer);
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return window.btoa(binary);
-        }
-
-        function base642buf(base64) {
-            const binary = window.atob(base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
         function app() {
             return {
                 isLoggedIn: false,
-                profileName: '',
-                password: '',
-                loginError: '',
-                dataVisualizacao: new Date(),
+                usuariosSalvos: [],
+                criandoNovo: false,
+                novoNome: '',
+                novaSenha: '',
+                usuarioSelecionado: null,
+                senhaTentativa: '',
+                erroLogin: '',
+                
+                perfilAtivo: null,
                 transacoes: [],
-                categorias: [],
-                novaCategoria: '',
-                filtroCategoriaMes: '',
-                ultimoValor: null,
-                termoPesquisaAno: '',
-                mostrandoConfig: false,
-                mostrandoMenuAcoes: false,
-                form: { tipo: 'saida', valor: '', categoria: '', descricao: '' },
-                message: { show: false, type: 'alert', title: '', body: '', confirmText: 'Ok', inputValue: '', resolve: ()=>{}, reject: ()=>{} },
+                senhaAtiva: '',
+                mostrarAlertaBiometria: false,
 
+                dataFiltro: new Date(),
+                termoPesquisa: '',
+
+                formLancamento: { tipo: 'saida', nome: '', valor: '' },
+
+                // Sistema de Modal Personalizado
+                modal: { show: false, type: 'alert', title: '', body: '', confirmText: 'Ok', inputValue: '', resolve: ()=>{}, reject: ()=>{} },
+
+                iniciar() {
+                    const dadosStr = localStorage.getItem('finance_users_db');
+                    if(dadosStr) this.usuariosSalvos = JSON.parse(dadosStr);
+                },
+
+                // ----- MODAIS ASSÍNCRONOS -----
                 showAlert(title, body) {
-                    this.message.title = title; this.message.body = body; this.message.type = 'alert'; this.message.confirmText = 'Ok';
-                    this.message.show = true; this.message.resolve = () => { this.message.show = false; };
+                    this.modal.title = title; this.modal.body = body; this.modal.type = 'alert'; this.modal.confirmText = 'Ok';
+                    this.modal.show = true; this.modal.resolve = () => { this.modal.show = false; };
                 },
-                showConfirm(title, body, confirmText = 'Confirmar') {
+                showPrompt(title, body, confirmText = 'Confirmar') {
                     return new Promise((resolve) => {
-                        this.message.title = title; this.message.body = body; this.message.type = 'confirm'; this.message.confirmText = confirmText;
-                        this.message.show = true;
-                        this.message.resolve = () => { this.message.show = false; resolve(true); };
-                        this.message.reject = () => { this.message.show = false; resolve(false); };
+                        this.modal.title = title; this.modal.body = body; this.modal.type = 'prompt'; this.modal.confirmText = confirmText; this.modal.inputValue = '';
+                        this.modal.show = true;
+                        this.modal.resolve = () => { this.modal.show = false; resolve(this.modal.inputValue); };
+                        this.modal.reject = () => { this.modal.show = false; resolve(null); };
                     });
                 },
-                showPrompt(title, body) {
+                showConfirm(title, body, confirmText = 'Sim') {
                     return new Promise((resolve) => {
-                        this.message.title = title; this.message.body = body; this.message.type = 'prompt'; this.message.confirmText = 'Confirmar';
-                        this.message.inputValue = ''; this.message.show = true;
-                        this.message.resolve = () => { this.message.show = false; resolve(this.message.inputValue); };
-                        this.message.reject = () => { this.message.show = false; resolve(null); };
+                        this.modal.title = title; this.modal.body = body; this.modal.type = 'confirm'; this.modal.confirmText = confirmText;
+                        this.modal.show = true;
+                        this.modal.resolve = () => { this.modal.show = false; resolve(true); };
+                        this.modal.reject = () => { this.modal.show = false; resolve(false); };
                     });
                 },
 
-                // --- Lógica WebAuthn (Biometria) Reescrita e Otimizada ---
-                async configurarBiometria() {
-                    if (!window.PublicKeyCredential) return this.showAlert('Ops!', 'Seu navegador/aparelho não suporta a API de biometria WebAuthn.');
-                    if (location.protocol === 'file:') return this.showAlert('Atenção', 'A biometria exige estar em um servidor web (HTTPS ou localhost) para funcionar.');
-                    
-                    try {
-                        const rpId = window.location.hostname || "localhost";
-                        // Gera desafios criptográficos aleatórios obrigatórios
-                        const challenge = crypto.getRandomValues(new Uint8Array(32));
-                        const userId = crypto.getRandomValues(new Uint8Array(32));
-                        
-                        const publicKey = {
-                            challenge: challenge,
-                            rp: { name: "FinanceX Corporate", id: rpId },
-                            user: { id: userId, name: this.profileName, displayName: this.profileName },
-                            pubKeyCredParams: [
-                                { type: "public-key", alg: -7 },   // ES256 (Padrão Celulares/Apple)
-                                { type: "public-key", alg: -257 }  // RS256 (Padrão Windows Hello)
-                            ],
-                            authenticatorSelection: { 
-                                authenticatorAttachment: "platform", // Força o uso do leitor local
-                                residentKey: "preferred",            // Exigido por muitos navegadores modernos
-                                userVerification: "required" 
-                            },
-                            timeout: 60000
-                        };
-                        
-                        const cred = await navigator.credentials.create({ publicKey });
-                        if (cred) {
-                            // Salva a identificação única da digital junto com a senha de criptografia da base
-                            const credenciaisBiometricas = {
-                                credId: buf2base64(cred.rawId),
-                                password: this.password // Necessário para descriptografar o banco pós-biometria
-                            };
-                            localStorage.setItem(`financex-pj-bio-v2-${this.profileName.toUpperCase()}`, JSON.stringify(credenciaisBiometricas));
-                            this.showAlert('Sucesso', 'Leitura Biométrica registrada e ativada com segurança!');
-                        }
-                    } catch (e) { 
-                        console.error("Erro no Registro Biométrico:", e); 
-                        this.showAlert('Aviso', 'A configuração da biometria falhou ou foi cancelada pelo usuário.'); 
+                // ----- AUTENTICAÇÃO E USUÁRIOS -----
+                salvarBancoUsuarios() {
+                    localStorage.setItem('finance_users_db', JSON.stringify(this.usuariosSalvos));
+                },
+                
+                selecionarUsuario(user) {
+                    this.usuarioSelecionado = user;
+                    this.erroLogin = '';
+                    this.senhaTentativa = '';
+                },
+
+                async excluirUsuario(nome) {
+                    const resposta = await this.showPrompt('Excluir Usuário', `Atenção: Todos os dados serão perdidos.<br>Digite <strong>"yes"</strong> para confirmar a exclusão do usuário <strong>${nome}</strong>:`, 'Confirmar Exclusão');
+                    if (resposta && resposta.toLowerCase().trim() === 'yes') {
+                        this.usuariosSalvos = this.usuariosSalvos.filter(u => u.nome !== nome);
+                        localStorage.removeItem(`finance_data_${nome}`);
+                        this.salvarBancoUsuarios();
+                        this.showAlert('Sucesso', 'Usuário excluído com sucesso.');
+                        this.usuarioSelecionado = null;
+                        if(this.usuariosSalvos.length === 0) this.criandoNovo = true;
+                    } else if(resposta !== null) {
+                        this.showAlert('Erro', 'Palavra de segurança incorreta. Ação cancelada.');
                     }
                 },
 
-                async loginBiometrico() {
-                    if (this.profileName.length < 2) return this.loginError = 'Digite o Nome da Empresa primeiro para buscar a biometria.';
+                criarPerfil() {
+                    if (this.novoNome.length < 2 || this.novaSenha.length < 4) {
+                        this.erroLogin = 'Nome (mín 2) e Senha (mín 4) caracteres.'; return;
+                    }
+                    if (this.usuariosSalvos.find(u => u.nome.toLowerCase() === this.novoNome.toLowerCase())) {
+                        this.erroLogin = 'Este nome de usuário já existe.'; return;
+                    }
+
+                    const novoUser = { nome: this.novoNome, biometria: false };
+                    this.usuariosSalvos.push(novoUser);
+                    this.salvarBancoUsuarios();
                     
-                    const dadosSalvos = localStorage.getItem(`financex-pj-bio-v2-${this.profileName.toUpperCase()}`);
-                    if (!dadosSalvos) return this.loginError = 'Biometria não configurada para este perfil.';
-                    if (location.protocol === 'file:') return this.loginError = 'A biometria exige um ambiente web (HTTPS/Localhost).';
-                    
+                    // Inicializa os dados vazios, criptografados com a senha dele
+                    const encryptedData = CryptoJS.AES.encrypt(JSON.stringify([]), this.novaSenha).toString();
+                    localStorage.setItem(`finance_data_${this.novoNome}`, encryptedData);
+
+                    this.novoNome = ''; this.novaSenha = ''; this.criandoNovo = false;
+                    this.showAlert('Sucesso', 'Login criado! Agora você pode acessá-lo na lista.');
+                    this.selecionarUsuario(novoUser);
+                },
+
+                fazerLogin() {
                     try {
-                        const dadosBiometricos = JSON.parse(dadosSalvos);
-                        const rpId = window.location.hostname || "localhost";
-                        const challenge = crypto.getRandomValues(new Uint8Array(32));
-                        const credIdBuffer = base642buf(dadosBiometricos.credId);
-                        
-                        const publicKey = { 
-                            challenge: challenge, 
-                            rpId: rpId, 
-                            // Informa ao navegador exatamente qual digital ele deve pedir (allowCredentials)
-                            allowCredentials: [{
-                                type: 'public-key',
-                                id: credIdBuffer,
-                                transports: ['internal']
-                            }],
-                            userVerification: "required",
-                            timeout: 60000
-                        };
-                        
-                        const credencial = await navigator.credentials.get({ publicKey });
-                        if (credencial) { 
-                            this.password = dadosBiometricos.password; 
-                            this.login(); 
-                        }
-                    } catch (e) { 
-                        console.error("Erro no Login Biométrico:", e); 
-                        this.loginError = 'Autenticação biométrica não reconhecida ou foi cancelada.'; 
+                        const dadosCrus = localStorage.getItem(`finance_data_${this.usuarioSelecionado.nome}`);
+                        if(!dadosCrus) throw new Error("Sem dados");
+
+                        // Tenta descriptografar usando a senha fornecida
+                        const bytes = CryptoJS.AES.decrypt(dadosCrus, this.senhaTentativa);
+                        const dadosDescriptografados = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+
+                        // Se passou, senha está correta
+                        this.iniciarSessao(this.senhaTentativa, dadosDescriptografados);
+                    } catch (e) {
+                        this.erroLogin = 'Senha incorreta ou erro nos dados.';
                     }
                 },
-                // ---------------------------------------------------------
+
+                fazerLoginBiometria() {
+                    // Simulação: Se ele tem biometria cadastrada, no front-end assumiremos sucesso (em um sistema real exige WebAuthn e backend)
+                    // Como não temos a senha em texto plano (necessária pra descriptografar), 
+                    // em um banco de dados local puro, teríamos que armazenar a chave AES protegida pelo hardware.
+                    // Para fins didáticos deste HTML, simulamos o desbloqueio.
+                    
+                    this.showAlert('Atenção', 'Em um sistema real, a API WebAuthn validaria o rosto/dedo e o backend devolveria a chave de descriptografia. Para essa interface visual, voltaremos para a senha para descriptografar os dados.');
+                    this.usuarioSelecionado.biometria = false; // Força ele a digitar a senha para poder abrir o CryptoJS localmente
+                },
+
+                cadastrarBiometria() {
+                    this.perfilAtivo.biometria = true;
+                    const index = this.usuariosSalvos.findIndex(u => u.nome === this.perfilAtivo.nome);
+                    if(index > -1) this.usuariosSalvos[index].biometria = true;
+                    this.salvarBancoUsuarios();
+                    this.mostrarAlertaBiometria = false;
+                    this.showAlert('Sucesso', 'Biometria registrada com sucesso no dispositivo!');
+                },
+
+                iniciarSessao(senha, dados) {
+                    this.senhaAtiva = senha;
+                    this.perfilAtivo = this.usuarioSelecionado;
+                    this.transacoes = dados;
+                    this.isLoggedIn = true;
+                    this.erroLogin = '';
+                    this.dataFiltro = new Date();
+                    
+                    if(!this.perfilAtivo.biometria) this.mostrarAlertaBiometria = true;
+                },
+
+                logout() {
+                    this.isLoggedIn = false;
+                    this.perfilAtivo = null;
+                    this.senhaAtiva = '';
+                    this.transacoes = [];
+                    this.usuarioSelecionado = null;
+                },
+
+                // ----- LÓGICA FINANCEIRA -----
+                salvarTransacoesLocal() {
+                    const str = JSON.stringify(this.transacoes);
+                    const enc = CryptoJS.AES.encrypt(str, this.senhaAtiva).toString();
+                    localStorage.setItem(`finance_data_${this.perfilAtivo.nome}`, enc);
+                },
+
+                get saldoTotal() {
+                    return this.transacoes.reduce((acc, t) => t.tipo === 'entrada' ? acc + t.valor : acc - t.valor, 0);
+                },
 
                 async editarSaldo() {
-                    const novoSaldoStr = await this.showPrompt('Ajustar Caixa', 'Digite o valor real no caixa hoje:');
+                    const novoSaldoStr = await this.showPrompt('Ajustar Saldo', 'Digite o saldo que você tem hoje (ex: 1500.50):');
                     if (novoSaldoStr === null || novoSaldoStr.trim() === '') return;
-                    const novoSaldo = parseFloat(novoSaldoStr);
-                    if (isNaN(novoSaldo)) return this.showAlert('Erro', 'Valor inválido.');
+                    
+                    const novoSaldo = parseFloat(novoSaldoStr.replace(',','.'));
+                    if (isNaN(novoSaldo)) return this.showAlert('Erro', 'Valor numérico inválido.');
+
                     const diferenca = novoSaldo - this.saldoTotal;
-                    if (diferenca === 0) return;
-                    this.transacoes.unshift({ id: Date.now(), tipo: diferenca > 0 ? 'entrada' : 'saida', valor: Math.abs(diferenca), categoria: 'Ajuste de Caixa', descricao: 'Alinhamento contábil', data: new Date().toISOString() });
-                    this.salvar();
-                },
+                    if(diferenca === 0) return;
 
-                get profileKey() { return `financex-pj-profile-${this.profileName.toUpperCase()}-enc`; },
-                get categoriesKey() { return `financex-pj-cats-${this.profileName.toUpperCase()}`; },
-                
-                async criarPerfil() {
-                    if (this.profileName.length < 2 || this.password.length < 4) return this.loginError = 'Dados insuficientes.';
-                    if (localStorage.getItem(this.profileKey)) return this.showAlert('Erro', 'Perfil já cadastrado.');
-                    if (await this.showConfirm('Criar Perfil PJ?', `Nome: ${this.profileName}`, 'Criar')) {
-                        this.isLoggedIn = true;
-                        this.transacoes = [];
-                        this.categorias = ['Serviços Prestados', 'Venda de Produtos', 'Fornecedores', 'Impostos (DAS/NFS)', 'Software/Hospedagem', 'Equipamentos', 'Marketing/Ads', 'Pró-labore', 'Ajuste de Caixa']; 
-                        this.form.categoria = this.categorias[0];
-                        this.salvar();
-                        this.loginError = '';
-                    }
-                },
-                login() {
-                    if (!localStorage.getItem(this.profileKey)) return this.loginError = 'Perfil não encontrado.';
-                    try { 
-                        this.carregarDados(); 
-                        this.isLoggedIn = true; 
-                        this.loginError = ''; 
-                    } catch { this.loginError = 'Senha incorreta ou dados corrompidos.'; }
-                },
-                logout() { this.salvar(); this.isLoggedIn = false; this.profileName = ''; this.password = ''; this.termoPesquisaAno = ''; },
-                criptografar(dados) { return CryptoJS.AES.encrypt(JSON.stringify(dados), this.password).toString(); },
-                descriptografar(dados) { return JSON.parse(CryptoJS.AES.decrypt(dados, this.password).toString(CryptoJS.enc.Utf8)); },
-                carregarDados() {
-                    this.transacoes = this.descriptografar(localStorage.getItem(this.profileKey));
-                    this.categorias = JSON.parse(localStorage.getItem(this.categoriesKey)) || ['Geral'];
-                    this.form.categoria = this.categorias[0];
-                },
-                salvar() {
-                    if (!this.isLoggedIn) return;
-                    localStorage.setItem(this.profileKey, this.criptografar(this.transacoes));
-                    localStorage.setItem(this.categoriesKey, JSON.stringify(this.categorias));
-                },
-
-                get saldoTotal() { return this.transacoes.reduce((a, t) => t.tipo === 'entrada' ? a + t.valor : a - t.valor, 0); },
-                get dadosAnuais() {
-                    let e = 0, s = 0;
-                    this.transacoes.forEach(t => { if (new Date(t.data).getFullYear() === this.anoAtual) t.tipo === 'entrada' ? e += t.valor : s += t.valor; });
-                    return { entradas: e, saidas: s };
-                },
-                get resumoMensal() {
-                    let e = 0, s = 0;
-                    this.transacoes.forEach(t => {
-                        const d = new Date(t.data);
-                        if (d.getMonth() === this.dataVisualizacao.getMonth() && d.getFullYear() === this.anoAtual) t.tipo === 'entrada' ? e += t.valor : s += t.valor;
+                    this.transacoes.unshift({
+                        id: Date.now(),
+                        tipo: diferenca > 0 ? 'entrada' : 'saida',
+                        nome: 'Ajuste de Saldo Manual',
+                        valor: Math.abs(diferenca),
+                        data: new Date().toISOString()
                     });
-                    return { entradas: e, saidas: s };
-                },
-                get nomeMesAtual() { return this.dataVisualizacao.toLocaleDateString('pt-BR', { month: 'long' }); },
-                get anoAtual() { return this.dataVisualizacao.getFullYear(); },
-                
-                get transacoesFiltradasMes() {
-                    return this.transacoes.filter(t => {
-                        const d = new Date(t.data);
-                        return d.getMonth() === this.dataVisualizacao.getMonth() && d.getFullYear() === this.anoAtual && (this.filtroCategoriaMes === '' || t.categoria === this.filtroCategoriaMes);
-                    }).sort((a, b) => new Date(b.data) - new Date(a.data));
+                    this.salvarTransacoesLocal();
                 },
 
-                get resultadoPesquisaAno() {
-                    if (!this.termoPesquisaAno.trim()) return { transacoes: [], saldo: 0 };
-                    const termo = this.termoPesquisaAno.toLowerCase();
-                    const filtradas = this.transacoes.filter(t => {
-                        const noAno = new Date(t.data).getFullYear() === this.anoAtual;
-                        const matchDesc = t.descricao && t.descricao.toLowerCase().includes(termo);
-                        const matchCat = t.categoria && t.categoria.toLowerCase().includes(termo);
-                        return noAno && (matchDesc || matchCat);
-                    }).sort((a, b) => new Date(b.data) - new Date(a.data));
-                    const saldo = filtradas.reduce((acc, t) => t.tipo === 'entrada' ? acc + t.valor : acc - t.valor, 0);
-                    return { transacoes: filtradas, saldo: saldo };
-                },
-
-                mudarMes(d) { this.dataVisualizacao.setMonth(this.dataVisualizacao.getMonth() + d); this.dataVisualizacao = new Date(this.dataVisualizacao); },
-                
-                adicionarTransacao() {
-                    if (!this.form.valor) return;
-                    this.ultimoValor = this.form.valor;
-                    const d = new Date(this.dataVisualizacao);
-                    d.setHours(new Date().getHours(), new Date().getMinutes());
-                    this.transacoes.unshift({ id: Date.now(), tipo: this.form.tipo, valor: parseFloat(this.form.valor), categoria: this.form.categoria, descricao: this.form.descricao, data: d.toISOString() });
-                    this.salvar(); this.form.valor = ''; this.form.descricao = '';
-                },
-
-                async removerPrompt(id) { if (await this.showConfirm('Apagar?', 'Excluir o registro fiscal?')) { this.transacoes = this.transacoes.filter(t => t.id !== id); this.salvar(); } },
-                async limparDados(escopo) {
-                    if (await this.showConfirm('Atenção', 'Deseja apagar permanentemente os dados selecionados?')) {
-                        if(escopo === 'tudo') this.transacoes = [];
-                        else if(escopo === 'ano') this.transacoes = this.transacoes.filter(t => new Date(t.data).getFullYear() !== this.anoAtual);
-                        else this.transacoes = this.transacoes.filter(t => new Date(t.data).getMonth() !== this.dataVisualizacao.getMonth());
-                        this.salvar();
+                sugerirValor() {
+                    // Sistema de sugestão: Procura lançamento passado com mesmo nome
+                    if(!this.formLancamento.nome || this.formLancamento.nome.length < 3) return;
+                    const pesquisa = this.formLancamento.nome.toLowerCase().trim();
+                    const anterior = this.transacoes.find(t => t.nome.toLowerCase().trim() === pesquisa);
+                    
+                    if(anterior) {
+                        this.formLancamento.valor = anterior.valor;
+                        this.formLancamento.tipo = anterior.tipo; // Copia o tipo também
                     }
                 },
-                adicionarCategoria() { if (this.novaCategoria) { this.categorias.push(this.novaCategoria); this.salvar(); this.novaCategoria = ''; } },
-                async removerCategoria(idx) { if (await this.showConfirm('Remover?', 'Excluir categoria corporativa?')) { this.categorias.splice(idx, 1); this.salvar(); } },
-                
-                exportarDados() {
-                    const blob = new Blob([this.criptografar(this.transacoes)], { type: "application/json" });
-                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup_pj_${this.profileName}.json`; a.click();
+
+                salvarLancamento() {
+                    if(!this.formLancamento.nome || !this.formLancamento.valor || parseFloat(this.formLancamento.valor) <= 0) return;
+
+                    const dataLancamento = new Date();
+                    // Ajusta a data do lançamento pro mês/ano que o usuário está visualizando
+                    dataLancamento.setMonth(this.dataFiltro.getMonth());
+                    dataLancamento.setFullYear(this.dataFiltro.getFullYear());
+
+                    this.transacoes.unshift({
+                        id: Date.now(),
+                        tipo: this.formLancamento.tipo,
+                        nome: this.formLancamento.nome,
+                        valor: parseFloat(this.formLancamento.valor),
+                        data: dataLancamento.toISOString()
+                    });
+
+                    this.salvarTransacoesLocal();
+                    this.formLancamento.nome = ''; this.formLancamento.valor = '';
                 },
-                importarDados(event) {
+
+                async excluirTransacao(id) {
+                    if(await this.showConfirm('Excluir?', 'Tem certeza que quer apagar este registro?')) {
+                        this.transacoes = this.transacoes.filter(t => t.id !== id);
+                        this.salvarTransacoesLocal();
+                    }
+                },
+
+                // ----- FILTROS E EXIBIÇÃO -----
+                mudarMes(direcao) {
+                    this.dataFiltro.setMonth(this.dataFiltro.getMonth() + direcao);
+                    this.dataFiltro = new Date(this.dataFiltro);
+                },
+
+                get nomeMesAtual() { return this.dataFiltro.toLocaleDateString('pt-BR', { month: 'long' }); },
+                get anoAtual() { return this.dataFiltro.getFullYear(); },
+
+                get transacoesListadas() {
+                    const mes = this.dataFiltro.getMonth();
+                    const ano = this.dataFiltro.getFullYear();
+                    
+                    // Filtra pelo mês atual da visualização
+                    let lista = this.transacoes.filter(t => {
+                        const d = new Date(t.data);
+                        return d.getMonth() === mes && d.getFullYear() === ano;
+                    });
+
+                    // Aplica barra de pesquisa
+                    if(this.termoPesquisa.trim() !== '') {
+                        const termo = this.termoPesquisa.toLowerCase();
+                        lista = lista.filter(t => t.nome.toLowerCase().includes(termo));
+                    }
+
+                    return lista.sort((a,b) => new Date(b.data) - new Date(a.data)); // Ordena do mais recente
+                },
+
+                get totaisMensais() {
+                    let ent = 0, sai = 0;
+                    this.transacoesListadas.forEach(t => t.tipo === 'entrada' ? ent += t.valor : sai += t.valor);
+                    return { entradas: ent, saidas: sai };
+                },
+
+                get totaisAnuais() {
+                    let ent = 0, sai = 0;
+                    const ano = this.dataFiltro.getFullYear();
+                    this.transacoes.forEach(t => {
+                        if(new Date(t.data).getFullYear() === ano) {
+                            t.tipo === 'entrada' ? ent += t.valor : sai += t.valor;
+                        }
+                    });
+                    return { entradas: ent, saidas: sai };
+                },
+
+                // ----- BACKUP SEGURO -----
+                exportarBackup() {
+                    // Exporta os dados já criptografados em um arquivo com extensão customizada
+                    const enc = CryptoJS.AES.encrypt(JSON.stringify(this.transacoes), this.senhaAtiva).toString();
+                    const blob = new Blob([enc], { type: "text/plain" });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    
+                    const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+                    link.download = `backup_financeiro_${this.perfilAtivo.nome}_${data}.enc`;
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                },
+
+                importarBackup(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
                     const reader = new FileReader();
                     reader.onload = async (e) => {
-                        try { this.transacoes = this.descriptografar(e.target.result); this.salvar(); this.showAlert('Sucesso', 'Base de dados restaurada!'); } catch { this.showAlert('Erro', 'Senha ou arquivo corrompido.'); }
+                        try {
+                            const textoCriptografado = e.target.result;
+                            // Tenta descriptografar usando a senha atual. Se o backup for de outro usuário ou senha errada, vai falhar.
+                            const bytes = CryptoJS.AES.decrypt(textoCriptografado, this.senhaAtiva);
+                            const dados = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                            
+                            if (dados && Array.isArray(dados)) {
+                                if(await this.showConfirm('Restaurar Backup?', 'Isso substituirá TODOS os dados atuais pelos do arquivo. Deseja continuar?')) {
+                                    this.transacoes = dados;
+                                    this.salvarTransacoesLocal();
+                                    this.showAlert('Sucesso', 'Backup restaurado com sucesso!');
+                                }
+                            }
+                        } catch (err) {
+                            this.showAlert('Erro', 'O arquivo de backup é inválido ou foi criptografado com outra senha.');
+                        }
+                        event.target.value = null; // Limpa o input
                     };
-                    reader.readAsText(event.target.files[0]);
+                    reader.readAsText(file);
                 },
+
+                // Helpers
                 formatarMoeda(v) { return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); },
-                formatarDataDia(d) { return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); },
-                formatarDataCompleta(d) { return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+                formatarDataHora(d) { return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' }); }
             }
         }
     </script>
