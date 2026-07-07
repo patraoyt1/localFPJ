@@ -124,7 +124,7 @@
                         
                         <div class="border-t border-gray-800 pt-4">
                             <button @click="configurarBiometria()" class="w-full bg-slate-800 border border-slate-600 text-yellow-500 hover:text-yellow-400 text-xs font-bold py-3 rounded-xl hover:bg-slate-700 transition flex items-center justify-center gap-2 shadow-md">
-                                <i class="fa-solid fa-fingerprint text-base"></i> Registrar Leitura Biométrica
+                                <i class="fa-solid fa-fingerprint text-base"></i> Configurar Biometria WebAuthn
                             </button>
                         </div>
                     </div>
@@ -195,7 +195,7 @@
                     <button @click="mudarMes(1)" class="w-12 h-12 flex items-center justify-center bg-gray-900 hover:bg-yellow-600 hover:text-slate-900 rounded-full transition shadow-inner text-gray-400"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
 
-                <!-- Área de Relatório Anual (Simplificada) -->
+                <!-- Área de Relatório Anual (Sem Gráfico, Otimizada) -->
                 <div class="bg-gray-800 p-5 rounded-3xl border border-gray-700 shadow-xl">
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-scale-balanced mr-2 text-blue-400"></i>Balanço Anual (<span x-text="anoAtual"></span>)</h3>
                     
@@ -309,6 +309,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     
     <script>
+        // Funções de conversão obrigatórias para a WebAuthn armazenar no LocalStorage
+        function buf2base64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base642buf(base64) {
+            const binary = window.atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
         function app() {
             return {
                 isLoggedIn: false,
@@ -348,25 +367,28 @@
                     });
                 },
 
-                // Lógica da Biometria Atualizada
+                // --- Lógica WebAuthn (Biometria) Reescrita e Otimizada ---
                 async configurarBiometria() {
-                    if (!window.PublicKeyCredential) return this.showAlert('Ops!', 'Seu navegador/aparelho não suporta login biométrico.');
-                    if (location.protocol === 'file:') return this.showAlert('Atenção', 'A biometria exige estar em um servidor web (HTTPS ou localhost).');
+                    if (!window.PublicKeyCredential) return this.showAlert('Ops!', 'Seu navegador/aparelho não suporta a API de biometria WebAuthn.');
+                    if (location.protocol === 'file:') return this.showAlert('Atenção', 'A biometria exige estar em um servidor web (HTTPS ou localhost) para funcionar.');
                     
                     try {
                         const rpId = window.location.hostname || "localhost";
-                        const userId = new Uint8Array(this.profileName.split('').map(c => c.charCodeAt(0)));
+                        // Gera desafios criptográficos aleatórios obrigatórios
+                        const challenge = crypto.getRandomValues(new Uint8Array(32));
+                        const userId = crypto.getRandomValues(new Uint8Array(32));
                         
                         const publicKey = {
-                            challenge: new Uint8Array(32),
+                            challenge: challenge,
                             rp: { name: "FinanceX Corporate", id: rpId },
                             user: { id: userId, name: this.profileName, displayName: this.profileName },
                             pubKeyCredParams: [
-                                { type: "public-key", alg: -7 },   // Suporte para Android/Apple
-                                { type: "public-key", alg: -257 }  // Suporte para Windows Hello (RSA)
+                                { type: "public-key", alg: -7 },   // ES256 (Padrão Celulares/Apple)
+                                { type: "public-key", alg: -257 }  // RS256 (Padrão Windows Hello)
                             ],
                             authenticatorSelection: { 
-                                authenticatorAttachment: "platform", // Força o leitor local do aparelho
+                                authenticatorAttachment: "platform", // Força o uso do leitor local
+                                residentKey: "preferred",            // Exigido por muitos navegadores modernos
                                 userVerification: "required" 
                             },
                             timeout: 60000
@@ -374,39 +396,57 @@
                         
                         const cred = await navigator.credentials.create({ publicKey });
                         if (cred) {
-                            localStorage.setItem(`financex-pj-bio-${this.profileName.toUpperCase()}`, this.password);
-                            this.showAlert('Sucesso', 'Leitura Biométrica ativada para este perfil!');
+                            // Salva a identificação única da digital junto com a senha de criptografia da base
+                            const credenciaisBiometricas = {
+                                credId: buf2base64(cred.rawId),
+                                password: this.password // Necessário para descriptografar o banco pós-biometria
+                            };
+                            localStorage.setItem(`financex-pj-bio-v2-${this.profileName.toUpperCase()}`, JSON.stringify(credenciaisBiometricas));
+                            this.showAlert('Sucesso', 'Leitura Biométrica registrada e ativada com segurança!');
                         }
                     } catch (e) { 
-                        console.error(e); 
-                        this.showAlert('Cancelado', 'A configuração da biometria falhou ou foi cancelada pelo usuário.'); 
+                        console.error("Erro no Registro Biométrico:", e); 
+                        this.showAlert('Aviso', 'A configuração da biometria falhou ou foi cancelada pelo usuário.'); 
                     }
                 },
 
                 async loginBiometrico() {
-                    if (this.profileName.length < 2) return this.loginError = 'Digite o Nome da Empresa primeiro.';
-                    const senhaSalva = localStorage.getItem(`financex-pj-bio-${this.profileName.toUpperCase()}`);
-                    if (!senhaSalva) return this.loginError = 'Biometria não configurada para este perfil.';
-                    if (location.protocol === 'file:') return this.loginError = 'A biometria exige um ambiente de hospedagem web.';
+                    if (this.profileName.length < 2) return this.loginError = 'Digite o Nome da Empresa primeiro para buscar a biometria.';
+                    
+                    const dadosSalvos = localStorage.getItem(`financex-pj-bio-v2-${this.profileName.toUpperCase()}`);
+                    if (!dadosSalvos) return this.loginError = 'Biometria não configurada para este perfil.';
+                    if (location.protocol === 'file:') return this.loginError = 'A biometria exige um ambiente web (HTTPS/Localhost).';
                     
                     try {
+                        const dadosBiometricos = JSON.parse(dadosSalvos);
                         const rpId = window.location.hostname || "localhost";
+                        const challenge = crypto.getRandomValues(new Uint8Array(32));
+                        const credIdBuffer = base642buf(dadosBiometricos.credId);
+                        
                         const publicKey = { 
-                            challenge: new Uint8Array(32), 
+                            challenge: challenge, 
                             rpId: rpId, 
-                            userVerification: "required" 
+                            // Informa ao navegador exatamente qual digital ele deve pedir (allowCredentials)
+                            allowCredentials: [{
+                                type: 'public-key',
+                                id: credIdBuffer,
+                                transports: ['internal']
+                            }],
+                            userVerification: "required",
+                            timeout: 60000
                         };
                         
                         const credencial = await navigator.credentials.get({ publicKey });
                         if (credencial) { 
-                            this.password = senhaSalva; 
+                            this.password = dadosBiometricos.password; 
                             this.login(); 
                         }
                     } catch (e) { 
-                        console.error(e); 
-                        this.loginError = 'Autenticação biométrica não reconhecida ou cancelada.'; 
+                        console.error("Erro no Login Biométrico:", e); 
+                        this.loginError = 'Autenticação biométrica não reconhecida ou foi cancelada.'; 
                     }
                 },
+                // ---------------------------------------------------------
 
                 async editarSaldo() {
                     const novoSaldoStr = await this.showPrompt('Ajustar Caixa', 'Digite o valor real no caixa hoje:');
