@@ -9,10 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- API de Gráficos: Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- OTIMIZAÇÃO: Alpine.js com "defer" garante que ele carregue apenas após o código JS ser lido -->
+    <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <style>
@@ -77,7 +74,7 @@
             <p x-show="loginError" class="text-red-400 text-sm mt-5 font-bold bg-red-900/20 py-2 px-4 rounded-lg" x-text="loginError"></p>
         </div>
 
-        <!-- Dashboard Principal: Responsivo em Grid -->
+        <!-- Dashboard Principal -->
         <div x-show="isLoggedIn" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             <!-- COLUNA ESQUERDA (Operacional) -->
@@ -185,7 +182,7 @@
 
             </div>
 
-            <!-- COLUNA DIREITA (Análise, Gráficos e Extratos) -->
+            <!-- COLUNA DIREITA (Análise e Extratos) -->
             <div class="lg:col-span-7 space-y-6">
 
                 <!-- Bloco de Navegação de Mês -->
@@ -198,32 +195,18 @@
                     <button @click="mudarMes(1)" class="w-12 h-12 flex items-center justify-center bg-gray-900 hover:bg-yellow-600 hover:text-slate-900 rounded-full transition shadow-inner text-gray-400"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
 
-                <!-- Área de Relatório Gráfico e Anual -->
-                <div class="bg-gray-800 p-5 rounded-3xl border border-gray-700 shadow-xl lg:flex gap-6 items-center">
+                <!-- Área de Relatório Anual (Simplificada) -->
+                <div class="bg-gray-800 p-5 rounded-3xl border border-gray-700 shadow-xl">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-scale-balanced mr-2 text-blue-400"></i>Balanço Anual (<span x-text="anoAtual"></span>)</h3>
                     
-                    <!-- Resumos Numéricos -->
-                    <div class="lg:w-1/2 space-y-3 mb-6 lg:mb-0">
-                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-2 text-blue-400"></i>Balanço Anual (<span x-text="anoAtual"></span>)</h3>
-                        
-                        <div class="bg-gray-900 p-4 rounded-2xl border-l-4 border-green-500 shadow-sm">
-                            <p class="text-[10px] text-gray-500 uppercase font-bold">Faturamento Acumulado</p>
-                            <p class="text-green-400 font-black text-xl lg:text-2xl tracking-tight" x-text="formatarMoeda(dadosAnuais.entradas)"></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-900 p-5 rounded-2xl border-l-4 border-green-500 shadow-sm">
+                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Faturamento Acumulado</p>
+                            <p class="text-green-400 font-black text-2xl lg:text-3xl tracking-tight" x-text="formatarMoeda(dadosAnuais.entradas)"></p>
                         </div>
-                        <div class="bg-gray-900 p-4 rounded-2xl border-l-4 border-red-500 shadow-sm">
-                            <p class="text-[10px] text-gray-500 uppercase font-bold">Custos e Despesas Acumuladas</p>
-                            <p class="text-red-400 font-black text-xl lg:text-2xl tracking-tight" x-text="formatarMoeda(dadosAnuais.saidas)"></p>
-                        </div>
-                    </div>
-
-                    <!-- Canvas do Chart.js -->
-                    <div class="lg:w-1/2 relative flex justify-center items-center bg-gray-900/50 rounded-2xl p-4 border border-gray-700/50 h-[220px]">
-                        <div x-show="dadosAnuais.entradas === 0 && dadosAnuais.saidas === 0" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600 z-10 bg-gray-900/80 rounded-2xl">
-                            <i class="fa-solid fa-chart-simple text-3xl mb-2 opacity-50"></i>
-                            <p class="text-xs font-bold uppercase">Sem dados no ano</p>
-                        </div>
-                        <!-- Canvas onde o gráfico será desenhado -->
-                        <div class="w-full h-full relative">
-                            <canvas id="graficoDoughnutAnual"></canvas>
+                        <div class="bg-gray-900 p-5 rounded-2xl border-l-4 border-red-500 shadow-sm">
+                            <p class="text-xs text-gray-500 uppercase font-bold mb-1">Custos e Despesas Acumuladas</p>
+                            <p class="text-red-400 font-black text-2xl lg:text-3xl tracking-tight" x-text="formatarMoeda(dadosAnuais.saidas)"></p>
                         </div>
                     </div>
                 </div>
@@ -337,81 +320,12 @@
                 categorias: [],
                 novaCategoria: '',
                 filtroCategoriaMes: '',
-                
                 ultimoValor: null,
                 termoPesquisaAno: '',
-
                 mostrandoConfig: false,
                 mostrandoMenuAcoes: false,
                 form: { tipo: 'saida', valor: '', categoria: '', descricao: '' },
                 message: { show: false, type: 'alert', title: '', body: '', confirmText: 'Ok', inputValue: '', resolve: ()=>{}, reject: ()=>{} },
-                
-                graficoInstancia: null,
-
-                init() {
-                    this.$watch('transacoes', () => this.$nextTick(() => this.atualizarGraficoDashboard()));
-                    this.$watch('dataVisualizacao', () => this.$nextTick(() => this.atualizarGraficoDashboard()));
-                },
-
-                atualizarGraficoDashboard() {
-                    if (!this.isLoggedIn) return;
-                    
-                    const canvas = document.getElementById('graficoDoughnutAnual');
-                    if (!canvas) return;
-
-                    const entradas = this.dadosAnuais.entradas;
-                    const saidas = this.dadosAnuais.saidas;
-                    
-                    const total = entradas + saidas;
-                    let pctEntradas = '0', pctSaidas = '0';
-                    if (total > 0) {
-                        pctEntradas = ((entradas / total) * 100).toFixed(1);
-                        pctSaidas = ((saidas / total) * 100).toFixed(1);
-                    }
-
-                    if (this.graficoInstancia) {
-                        this.graficoInstancia.data.datasets[0].data = [entradas, saidas];
-                        this.graficoInstancia.data.labels = [`Entradas (${pctEntradas}%)`, `Saídas (${pctSaidas}%)`];
-                        this.graficoInstancia.update();
-                    } else {
-                        this.graficoInstancia = new Chart(canvas, {
-                            type: 'doughnut',
-                            data: {
-                                labels: [`Entradas (${pctEntradas}%)`, `Saídas (${pctSaidas}%)`],
-                                datasets: [{
-                                    data: [entradas, saidas],
-                                    backgroundColor: ['#22c55e', '#ef4444'], 
-                                    borderColor: ['#14532d', '#7f1d1d'], 
-                                    borderWidth: 2,
-                                    hoverOffset: 4
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                cutout: '70%',
-                                plugins: {
-                                    legend: {
-                                        position: 'right',
-                                        labels: { color: '#cbd5e1', font: { family: 'Inter', weight: 'bold' }, padding: 15 }
-                                    },
-                                    tooltip: {
-                                        callbacks: {
-                                            label: function(context) {
-                                                let label = context.label || '';
-                                                if (label) label += ': ';
-                                                if (context.parsed !== null) {
-                                                    label += new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(context.parsed);
-                                                }
-                                                return label;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-                },
 
                 showAlert(title, body) {
                     this.message.title = title; this.message.body = body; this.message.type = 'alert'; this.message.confirmText = 'Ok';
@@ -434,36 +348,64 @@
                     });
                 },
 
+                // Lógica da Biometria Atualizada
                 async configurarBiometria() {
                     if (!window.PublicKeyCredential) return this.showAlert('Ops!', 'Seu navegador/aparelho não suporta login biométrico.');
-                    if (location.protocol === 'file:') return this.showAlert('Atenção', 'A biometria exige HTTPS. Teste subindo o arquivo no GitHub Pages.');
+                    if (location.protocol === 'file:') return this.showAlert('Atenção', 'A biometria exige estar em um servidor web (HTTPS ou localhost).');
+                    
                     try {
+                        const rpId = window.location.hostname || "localhost";
+                        const userId = new Uint8Array(this.profileName.split('').map(c => c.charCodeAt(0)));
+                        
                         const publicKey = {
                             challenge: new Uint8Array(32),
-                            rp: { name: "FinanceX Corporate" },
-                            user: { id: new Uint8Array(16), name: this.profileName, displayName: this.profileName },
-                            pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-                            authenticatorSelection: { userVerification: "required" },
+                            rp: { name: "FinanceX Corporate", id: rpId },
+                            user: { id: userId, name: this.profileName, displayName: this.profileName },
+                            pubKeyCredParams: [
+                                { type: "public-key", alg: -7 },   // Suporte para Android/Apple
+                                { type: "public-key", alg: -257 }  // Suporte para Windows Hello (RSA)
+                            ],
+                            authenticatorSelection: { 
+                                authenticatorAttachment: "platform", // Força o leitor local do aparelho
+                                userVerification: "required" 
+                            },
                             timeout: 60000
                         };
+                        
                         const cred = await navigator.credentials.create({ publicKey });
                         if (cred) {
                             localStorage.setItem(`financex-pj-bio-${this.profileName.toUpperCase()}`, this.password);
-                            this.showAlert('Sucesso', 'Impressão digital registrada!');
+                            this.showAlert('Sucesso', 'Leitura Biométrica ativada para este perfil!');
                         }
-                    } catch (e) { this.showAlert('Cancelado', 'A configuração da biometria falhou ou foi cancelada.'); }
+                    } catch (e) { 
+                        console.error(e); 
+                        this.showAlert('Cancelado', 'A configuração da biometria falhou ou foi cancelada pelo usuário.'); 
+                    }
                 },
 
                 async loginBiometrico() {
                     if (this.profileName.length < 2) return this.loginError = 'Digite o Nome da Empresa primeiro.';
                     const senhaSalva = localStorage.getItem(`financex-pj-bio-${this.profileName.toUpperCase()}`);
                     if (!senhaSalva) return this.loginError = 'Biometria não configurada para este perfil.';
-                    if (location.protocol === 'file:') return this.loginError = 'A biometria exige HTTPS (GitHub Pages).';
+                    if (location.protocol === 'file:') return this.loginError = 'A biometria exige um ambiente de hospedagem web.';
+                    
                     try {
-                        const publicKey = { challenge: new Uint8Array(32), rpId: window.location.hostname || "localhost", userVerification: "required" };
+                        const rpId = window.location.hostname || "localhost";
+                        const publicKey = { 
+                            challenge: new Uint8Array(32), 
+                            rpId: rpId, 
+                            userVerification: "required" 
+                        };
+                        
                         const credencial = await navigator.credentials.get({ publicKey });
-                        if (credencial) { this.password = senhaSalva; this.login(); }
-                    } catch (e) { this.loginError = 'Autenticação cancelada.'; }
+                        if (credencial) { 
+                            this.password = senhaSalva; 
+                            this.login(); 
+                        }
+                    } catch (e) { 
+                        console.error(e); 
+                        this.loginError = 'Autenticação biométrica não reconhecida ou cancelada.'; 
+                    }
                 },
 
                 async editarSaldo() {
@@ -490,7 +432,6 @@
                         this.form.categoria = this.categorias[0];
                         this.salvar();
                         this.loginError = '';
-                        this.$nextTick(() => this.atualizarGraficoDashboard()); 
                     }
                 },
                 login() {
@@ -499,10 +440,9 @@
                         this.carregarDados(); 
                         this.isLoggedIn = true; 
                         this.loginError = ''; 
-                        this.$nextTick(() => this.atualizarGraficoDashboard()); 
                     } catch { this.loginError = 'Senha incorreta ou dados corrompidos.'; }
                 },
-                logout() { this.salvar(); this.isLoggedIn = false; this.profileName = ''; this.password = ''; this.termoPesquisaAno = ''; if(this.graficoInstancia) { this.graficoInstancia.destroy(); this.graficoInstancia = null; } },
+                logout() { this.salvar(); this.isLoggedIn = false; this.profileName = ''; this.password = ''; this.termoPesquisaAno = ''; },
                 criptografar(dados) { return CryptoJS.AES.encrypt(JSON.stringify(dados), this.password).toString(); },
                 descriptografar(dados) { return JSON.parse(CryptoJS.AES.decrypt(dados, this.password).toString(CryptoJS.enc.Utf8)); },
                 carregarDados() {
