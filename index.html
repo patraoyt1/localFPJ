@@ -46,7 +46,6 @@
             <i class="fa-solid fa-wallet text-blue-500 text-5xl mb-6"></i>
             <h1 class="text-xl font-bold mb-6 text-white">Acesso Financeiro</h1>
 
-            <!-- Seleção de Usuários Existentes -->
             <div x-show="usuariosSalvos.length > 0 && !criandoNovo" class="w-full space-y-3 mb-6">
                 <p class="text-xs text-gray-400 text-center uppercase tracking-widest">Selecionar Conta</p>
                 <template x-for="user in usuariosSalvos" :key="user.nome">
@@ -65,7 +64,6 @@
                 </button>
             </div>
 
-            <!-- Formulário de Nova Conta -->
             <div x-show="criandoNovo || usuariosSalvos.length === 0" class="w-full">
                 <input x-model="novoNome" type="text" placeholder="Nome de Usuário" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-3 border border-gray-700 focus:border-blue-500 outline-none">
                 <input x-model="novaSenha" type="password" placeholder="Crie uma Senha" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-4 border border-gray-700 focus:border-blue-500 outline-none">
@@ -76,12 +74,11 @@
                 </div>
             </div>
 
-            <!-- Formulário de Autenticação (Senha ou Biometria) -->
             <div x-show="usuarioSelecionado" class="w-full mt-4 border-t border-gray-700 pt-6">
                 <p class="text-sm text-center text-gray-400 mb-4">Entrando como: <strong class="text-white" x-text="usuarioSelecionado?.nome"></strong></p>
                 
                 <div x-show="!usuarioSelecionado?.biometria" class="mb-4">
-                    <input x-model="senhaTentativa" type="password" placeholder="Digite sua senha" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-2 border border-gray-700 focus:border-blue-500 outline-none">
+                    <input x-model="senhaTentativa" @keydown.enter="fazerLogin()" type="password" placeholder="Digite sua senha" class="w-full bg-gray-800 text-white p-3 rounded-lg mb-2 border border-gray-700 focus:border-blue-500 outline-none">
                     <button @click="fazerLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition">Entrar</button>
                 </div>
 
@@ -113,7 +110,6 @@
                 
                 <button @click="logout()" class="absolute top-4 right-4 text-gray-500 hover:text-red-400 transition" title="Sair"><i class="fa-solid fa-power-off"></i></button>
 
-                <!-- Aviso de Cadastro de Biometria (Aparece apenas na primeira vez) -->
                 <div x-show="!perfilAtivo.biometria && mostrarAlertaBiometria" class="mt-4 bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg text-sm flex items-center justify-between">
                     <span class="text-blue-200">Deseja cadastrar impressão digital?</span>
                     <div class="flex gap-2">
@@ -136,7 +132,6 @@
 
             <!-- Menus Separados de Totais (Ano e Mês) -->
             <div class="grid grid-cols-2 gap-4">
-                <!-- Resumo Anual -->
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold mb-2 border-b border-gray-700 pb-1">Total Ano (<span x-text="anoAtual"></span>)</p>
                     <div class="flex justify-between items-center mb-1">
@@ -148,7 +143,6 @@
                         <span class="text-sm font-bold text-red-400" x-text="formatarMoeda(totaisAnuais.saidas)"></span>
                     </div>
                 </div>
-                <!-- Resumo Mensal -->
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold mb-2 border-b border-gray-700 pb-1">Total Mês (<span x-text="nomeMesAtual"></span>)</p>
                     <div class="flex justify-between items-center mb-1">
@@ -174,9 +168,26 @@
                 </div>
 
                 <div class="space-y-3">
-                    <input x-model="formLancamento.nome" @input="sugerirValor()" type="text" placeholder="Nome do lançamento (ex: Salário, Padaria)" class="w-full bg-gray-900 text-white p-3 rounded-lg border border-gray-600 outline-none focus:border-blue-500 text-sm">
+                    <!-- ENVOLTÓRIO RELATIVO PARA O POPUP DE SUGESTÃO -->
+                    <div class="relative w-full z-20">
+                        <!-- Popup flutuante de sugestões (Aparece ACIMA do input) -->
+                        <div x-show="mostrarSugestoes && sugestoesNomes.length > 0" 
+                             @click.outside="mostrarSugestoes = false"
+                             class="absolute bottom-full left-0 mb-1 w-full bg-gray-700 border border-gray-600 rounded-lg shadow-[0_-5px_15px_rgba(0,0,0,0.3)] overflow-hidden max-h-40 custom-scrollbar z-30">
+                            <template x-for="sugestao in sugestoesNomes" :key="sugestao">
+                                <button @click="selecionarSugestao(sugestao)" class="w-full text-left px-4 py-2.5 text-sm text-gray-200 hover:bg-blue-600 hover:text-white transition border-b border-gray-600 last:border-0" x-text="sugestao"></button>
+                            </template>
+                        </div>
+                        
+                        <!-- Input de Nome do Lançamento -->
+                        <input x-model="formLancamento.nome" 
+                               @input="mostrarSugestoes = true; sugerirValor()" 
+                               @focus="mostrarSugestoes = true"
+                               type="text" placeholder="Nome do lançamento (ex: Salário, Padaria)" 
+                               class="w-full bg-gray-900 text-white p-3 rounded-lg border border-gray-600 outline-none focus:border-blue-500 text-sm relative z-20">
+                    </div>
                     
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 relative z-10">
                         <div class="relative w-full">
                             <span class="absolute left-3 top-3 text-gray-500 text-sm">R$</span>
                             <input x-model="formLancamento.valor" type="number" step="0.01" placeholder="0.00" class="w-full bg-gray-900 text-white p-3 pl-9 rounded-lg border border-gray-600 outline-none focus:border-blue-500 text-sm">
@@ -203,7 +214,15 @@
                 <div class="relative mb-4">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-500"></i>
                     <input x-model="termoPesquisa" type="text" placeholder="Pesquisar por nome..." class="w-full bg-gray-800 text-white p-2 pl-9 rounded-lg border border-gray-700 outline-none text-sm">
-                    <p x-show="termoPesquisa.length > 0" class="text-[10px] text-blue-400 mt-1 ml-1" x-text="transacoesListadas.length + ' registro(s) encontrado(s)'"></p>
+                    
+                    <!-- DADOS REATIVOS DA PESQUISA -->
+                    <div x-show="termoPesquisa.length > 0" class="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center bg-gray-800/50 p-2 mt-2 rounded border border-gray-700">
+                        <p class="text-[10px] text-blue-400 mb-1 sm:mb-0" x-text="transacoesListadas.length + ' registro(s) encontrado(s)'"></p>
+                        <div class="flex gap-3 text-[10px]">
+                            <span class="text-gray-400">In: <span class="text-green-400 font-bold" x-text="formatarMoeda(totaisPesquisa.entradas)"></span></span>
+                            <span class="text-gray-400">Out: <span class="text-red-400 font-bold" x-text="formatarMoeda(totaisPesquisa.saidas)"></span></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Lista -->
@@ -238,6 +257,8 @@
 
     <!-- CryptoJS para criptografar os Backups -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <!-- Alpine.js (DEFER ADICIONADO PARA CORRIGIR O ERRO DE TELA PRETA) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <script>
@@ -261,6 +282,7 @@
                 termoPesquisa: '',
 
                 formLancamento: { tipo: 'saida', nome: '', valor: '' },
+                mostrarSugestoes: false, // Controle do balão de popup
 
                 // Sistema de Modal Personalizado
                 modal: { show: false, type: 'alert', title: '', body: '', confirmText: 'Ok', inputValue: '', resolve: ()=>{}, reject: ()=>{} },
@@ -329,7 +351,6 @@
                     this.usuariosSalvos.push(novoUser);
                     this.salvarBancoUsuarios();
                     
-                    // Inicializa os dados vazios, criptografados com a senha dele
                     const encryptedData = CryptoJS.AES.encrypt(JSON.stringify([]), this.novaSenha).toString();
                     localStorage.setItem(`finance_data_${this.novoNome}`, encryptedData);
 
@@ -343,11 +364,9 @@
                         const dadosCrus = localStorage.getItem(`finance_data_${this.usuarioSelecionado.nome}`);
                         if(!dadosCrus) throw new Error("Sem dados");
 
-                        // Tenta descriptografar usando a senha fornecida
                         const bytes = CryptoJS.AES.decrypt(dadosCrus, this.senhaTentativa);
                         const dadosDescriptografados = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 
-                        // Se passou, senha está correta
                         this.iniciarSessao(this.senhaTentativa, dadosDescriptografados);
                     } catch (e) {
                         this.erroLogin = 'Senha incorreta ou erro nos dados.';
@@ -355,13 +374,8 @@
                 },
 
                 fazerLoginBiometria() {
-                    // Simulação: Se ele tem biometria cadastrada, no front-end assumiremos sucesso (em um sistema real exige WebAuthn e backend)
-                    // Como não temos a senha em texto plano (necessária pra descriptografar), 
-                    // em um banco de dados local puro, teríamos que armazenar a chave AES protegida pelo hardware.
-                    // Para fins didáticos deste HTML, simulamos o desbloqueio.
-                    
                     this.showAlert('Atenção', 'Em um sistema real, a API WebAuthn validaria o rosto/dedo e o backend devolveria a chave de descriptografia. Para essa interface visual, voltaremos para a senha para descriptografar os dados.');
-                    this.usuarioSelecionado.biometria = false; // Força ele a digitar a senha para poder abrir o CryptoJS localmente
+                    this.usuarioSelecionado.biometria = false; 
                 },
 
                 cadastrarBiometria() {
@@ -392,7 +406,7 @@
                     this.usuarioSelecionado = null;
                 },
 
-                // ----- LÓGICA FINANCEIRA -----
+                // ----- LÓGICA FINANCEIRA & LANÇAMENTOS -----
                 salvarTransacoesLocal() {
                     const str = JSON.stringify(this.transacoes);
                     const enc = CryptoJS.AES.encrypt(str, this.senhaAtiva).toString();
@@ -423,15 +437,34 @@
                     this.salvarTransacoesLocal();
                 },
 
+                // LÓGICA DO AUTOCOMPLETAR (NOVO)
+                get sugestoesNomes() {
+                    if (!this.formLancamento.nome || this.formLancamento.nome.trim() === '') return [];
+                    const busca = this.formLancamento.nome.toLowerCase().trim();
+                    
+                    // Pega todos os nomes únicos do histórico de transações
+                    const nomesUnicos = [...new Set(this.transacoes.map(t => t.nome))];
+                    
+                    // Filtra ignorando maiúsculas e minúsculas e retorna no máximo 5 sugestões
+                    return nomesUnicos.filter(n => n.toLowerCase().includes(busca)).slice(0, 5);
+                },
+
+                selecionarSugestao(nome) {
+                    this.formLancamento.nome = nome;
+                    this.mostrarSugestoes = false; // Fecha o popup
+                    this.sugerirValor(); // Preenche o valor automaticamente com o valor do histórico
+                },
+
                 sugerirValor() {
-                    // Sistema de sugestão: Procura lançamento passado com mesmo nome
-                    if(!this.formLancamento.nome || this.formLancamento.nome.length < 3) return;
+                    if(!this.formLancamento.nome || this.formLancamento.nome.length < 2) return;
                     const pesquisa = this.formLancamento.nome.toLowerCase().trim();
+                    
+                    // Acha a última vez que esse nome exato foi lançado
                     const anterior = this.transacoes.find(t => t.nome.toLowerCase().trim() === pesquisa);
                     
                     if(anterior) {
                         this.formLancamento.valor = anterior.valor;
-                        this.formLancamento.tipo = anterior.tipo; // Copia o tipo também
+                        this.formLancamento.tipo = anterior.tipo;
                     }
                 },
 
@@ -439,7 +472,6 @@
                     if(!this.formLancamento.nome || !this.formLancamento.valor || parseFloat(this.formLancamento.valor) <= 0) return;
 
                     const dataLancamento = new Date();
-                    // Ajusta a data do lançamento pro mês/ano que o usuário está visualizando
                     dataLancamento.setMonth(this.dataFiltro.getMonth());
                     dataLancamento.setFullYear(this.dataFiltro.getFullYear());
 
@@ -453,6 +485,7 @@
 
                     this.salvarTransacoesLocal();
                     this.formLancamento.nome = ''; this.formLancamento.valor = '';
+                    this.mostrarSugestoes = false;
                 },
 
                 async excluirTransacao(id) {
@@ -475,24 +508,40 @@
                     const mes = this.dataFiltro.getMonth();
                     const ano = this.dataFiltro.getFullYear();
                     
-                    // Filtra pelo mês atual da visualização
                     let lista = this.transacoes.filter(t => {
                         const d = new Date(t.data);
                         return d.getMonth() === mes && d.getFullYear() === ano;
                     });
 
-                    // Aplica barra de pesquisa
                     if(this.termoPesquisa.trim() !== '') {
                         const termo = this.termoPesquisa.toLowerCase();
                         lista = lista.filter(t => t.nome.toLowerCase().includes(termo));
                     }
 
-                    return lista.sort((a,b) => new Date(b.data) - new Date(a.data)); // Ordena do mais recente
+                    return lista.sort((a,b) => new Date(b.data) - new Date(a.data));
+                },
+
+                // SOMATÓRIO EXCLUSIVO DA PESQUISA (NOVO)
+                get totaisPesquisa() {
+                    let ent = 0, sai = 0;
+                    this.transacoesListadas.forEach(t => {
+                        if (t.tipo === 'entrada') ent += t.valor;
+                        else sai += t.valor;
+                    });
+                    return { entradas: ent, saidas: sai };
                 },
 
                 get totaisMensais() {
                     let ent = 0, sai = 0;
-                    this.transacoesListadas.forEach(t => t.tipo === 'entrada' ? ent += t.valor : sai += t.valor);
+                    // Usa a lista filtrada apenas pelo mês (ignorando a pesquisa aqui)
+                    const mes = this.dataFiltro.getMonth();
+                    const ano = this.dataFiltro.getFullYear();
+                    this.transacoes.forEach(t => {
+                        const d = new Date(t.data);
+                        if(d.getMonth() === mes && d.getFullYear() === ano) {
+                            t.tipo === 'entrada' ? ent += t.valor : sai += t.valor;
+                        }
+                    });
                     return { entradas: ent, saidas: sai };
                 },
 
@@ -509,7 +558,6 @@
 
                 // ----- BACKUP SEGURO -----
                 exportarBackup() {
-                    // Exporta os dados já criptografados em um arquivo com extensão customizada
                     const enc = CryptoJS.AES.encrypt(JSON.stringify(this.transacoes), this.senhaAtiva).toString();
                     const blob = new Blob([enc], { type: "text/plain" });
                     const link = document.createElement('a');
@@ -531,7 +579,6 @@
                     reader.onload = async (e) => {
                         try {
                             const textoCriptografado = e.target.result;
-                            // Tenta descriptografar usando a senha atual. Se o backup for de outro usuário ou senha errada, vai falhar.
                             const bytes = CryptoJS.AES.decrypt(textoCriptografado, this.senhaAtiva);
                             const dados = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
                             
@@ -545,7 +592,7 @@
                         } catch (err) {
                             this.showAlert('Erro', 'O arquivo de backup é inválido ou foi criptografado com outra senha.');
                         }
-                        event.target.value = null; // Limpa o input
+                        event.target.value = null; 
                     };
                     reader.readAsText(file);
                 },
